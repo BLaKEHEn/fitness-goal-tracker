@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack - Fitness Tracker & Goal Setter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Personal Training Dashboard</p>
+        <h1>FitTrack</h1>
+        <p class="subtitle">Set weekly goals, log your daily progress, and stay consistent.</p>
+      </div>
+      <div class="today-card" id="todayCard"></div>
+    </header>
+
+    <main class="grid">
+      <section class="panel">
+        <h2>Set Weekly Goals</h2>
+        <form id="goalForm" class="stack">
+          <label>
+            Steps per day
+            <input type="number" id="goalSteps" min="1000" step="500" required />
+          </label>
+          <label>
+            Workouts per week
+            <input type="number" id="goalWorkouts" min="1" max="14" required />
+          </label>
+          <label>
+            Water (oz) per day
+            <input type="number" id="goalWater" min="16" step="8" required />
+          </label>
+          <button type="submit">Save Goals</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Log Today</h2>
+        <form id="logForm" class="stack">
+          <label>
+            Steps
+            <input type="number" id="logSteps" min="0" step="100" required />
+          </label>
+          <label>
+            Workout completed?
+            <select id="logWorkout" required>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label>
+            Water (oz)
+            <input type="number" id="logWater" min="0" step="8" required />
+          </label>
+          <label>
+            Notes
+            <textarea id="logNotes" rows="3" placeholder="How did training feel today?"></textarea>
+          </label>
+          <button type="submit">Save Daily Log</button>
+        </form>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Progress Overview</h2>
+        <div class="metrics" id="metrics"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Recent Logs</h2>
+        <div id="history" class="history"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
