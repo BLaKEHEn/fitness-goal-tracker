@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FitTrack - Running & Workout Tracker</title>
+  <title>FitTrack - Running, Workouts, Food, Progress</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -13,35 +13,57 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">Fitness Dashboard</p>
+        <p class="eyebrow">Performance Dashboard</p>
         <h1>FitTrack</h1>
-        <p class="subtitle">Track two core lanes: Running and Workout.</p>
+        <p class="subtitle">Running, workout split, food goals, and full body progress tracking.</p>
       </div>
       <div class="today-card" id="todayCard"></div>
     </header>
 
     <main class="grid">
       <section class="panel">
-        <h2>Set Weekly Goals</h2>
+        <h2>Goal Settings</h2>
         <form id="goalForm" class="stack">
-          <h3>Running</h3>
+          <h3>Running Goals</h3>
           <label>
-            Miles per week
-            <input type="number" id="goalRunMiles" min="1" step="0.5" required />
+            Daily miles goal
+            <input type="number" id="goalRunDailyMiles" min="0.5" step="0.1" required />
           </label>
           <label>
-            Runs per week
-            <input type="number" id="goalRunDays" min="1" max="14" required />
+            Daily time goal (minutes)
+            <input type="number" id="goalRunDailyMinutes" min="1" step="1" required />
+          </label>
+          <label>
+            Weekly miles goal
+            <input type="number" id="goalRunWeeklyMiles" min="1" step="0.5" required />
+          </label>
+          <label>
+            Monthly miles goal
+            <input type="number" id="goalRunMonthlyMiles" min="1" step="1" required />
           </label>
 
-          <h3>Workout</h3>
+          <h3>Workout Goals</h3>
           <label>
-            Workout sessions per week
-            <input type="number" id="goalWorkoutSessions" min="1" max="21" required />
+            Workout days per week goal
+            <input type="number" id="goalWorkoutDaysPerWeek" min="1" max="7" required />
           </label>
           <label>
-            Strength minutes per week
-            <input type="number" id="goalWorkoutMinutes" min="30" step="15" required />
+            Workout sessions per month goal
+            <input type="number" id="goalWorkoutSessionsPerMonth" min="4" step="1" required />
+          </label>
+
+          <h3>Food Goals</h3>
+          <label>
+            Daily calories goal
+            <input type="number" id="goalFoodCalories" min="1000" step="50" required />
+          </label>
+          <label>
+            Daily protein goal (g)
+            <input type="number" id="goalFoodProtein" min="50" step="5" required />
+          </label>
+          <label>
+            Daily water goal (oz)
+            <input type="number" id="goalFoodWater" min="16" step="8" required />
           </label>
 
           <button type="submit">Save Goals</button>
@@ -49,53 +71,144 @@
       </section>
 
       <section class="panel">
-        <h2>Log Today</h2>
-        <form id="logForm" class="stack">
+        <h2>Daily Log</h2>
+        <form id="dailyLogForm" class="stack">
+          <label>
+            Date
+            <input type="date" id="logDate" required />
+          </label>
+
           <h3>Running</h3>
           <label>
-            Miles today
+            Miles ran
             <input type="number" id="logRunMiles" min="0" step="0.1" required />
           </label>
           <label>
-            Run completed?
-            <select id="logRunDone" required>
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
+            Run time (minutes)
+            <input type="number" id="logRunMinutes" min="0" step="1" required />
           </label>
 
           <h3>Workout</h3>
           <label>
-            Workout completed?
+            Planned focus
+            <input type="text" id="logPlannedFocus" readonly />
+          </label>
+          <label>
+            Completed workout?
             <select id="logWorkoutDone" required>
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
           </label>
+          <div>
+            <div class="row-head">
+              <strong>Exercise Entries (Weight + Reps)</strong>
+              <button type="button" id="addExerciseBtn" class="secondary-btn">Add Exercise</button>
+            </div>
+            <div id="exerciseRows" class="exercise-rows"></div>
+          </div>
+
+          <h3>Food</h3>
           <label>
-            Workout minutes
-            <input type="number" id="logWorkoutMinutes" min="0" step="5" required />
+            Calories
+            <input type="number" id="logFoodCalories" min="0" step="1" required />
+          </label>
+          <label>
+            Protein (g)
+            <input type="number" id="logFoodProtein" min="0" step="1" required />
+          </label>
+          <label>
+            Water (oz)
+            <input type="number" id="logFoodWater" min="0" step="1" required />
           </label>
 
           <label>
             Notes
-            <textarea id="logNotes" rows="3" placeholder="How did training feel today?"></textarea>
+            <textarea id="logNotes" rows="3" placeholder="How did today go?"></textarea>
           </label>
           <button type="submit">Save Daily Log</button>
         </form>
       </section>
 
       <section class="panel span-2">
-        <h2>Progress Overview</h2>
+        <h2>Metrics</h2>
         <div class="metrics" id="metrics"></div>
       </section>
 
       <section class="panel span-2">
-        <h2>Recent Logs</h2>
+        <h2>Workout Split Plan (X = Missed Day)</h2>
+        <div id="planMeta" class="plan-meta"></div>
+        <div class="plan-wrap">
+          <table id="planTable" class="plan-table"></table>
+        </div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Exercise Progress (Baseline vs Latest)</h2>
+        <div id="exerciseProgress" class="history"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Body Tracking + Daily Photo</h2>
+        <form id="bodyForm" class="stack">
+          <label>
+            Date
+            <input type="date" id="bodyDate" required />
+          </label>
+          <label>
+            Body weight (lb)
+            <input type="number" id="bodyWeight" min="0" step="0.1" required />
+          </label>
+          <label>
+            Waist (in)
+            <input type="number" id="bodyWaist" min="0" step="0.1" />
+          </label>
+          <label>
+            Chest (in)
+            <input type="number" id="bodyChest" min="0" step="0.1" />
+          </label>
+          <label>
+            Arms (in)
+            <input type="number" id="bodyArms" min="0" step="0.1" />
+          </label>
+          <label>
+            Legs (in)
+            <input type="number" id="bodyLegs" min="0" step="0.1" />
+          </label>
+          <label>
+            Progress photo
+            <input type="file" id="bodyPhoto" accept="image/*" />
+          </label>
+          <button type="submit">Save Body Entry</button>
+        </form>
+        <div class="history" id="bodyHistory"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Recent Daily Logs</h2>
         <div id="history" class="history"></div>
       </section>
     </main>
   </div>
+
+  <template id="exerciseRowTemplate">
+    <div class="exercise-row">
+      <input type="text" class="exercise-name" placeholder="Exercise (e.g. Bench Press)" required />
+      <select class="exercise-muscle" required>
+        <option value="legs">Legs</option>
+        <option value="chest">Chest</option>
+        <option value="back">Back</option>
+        <option value="shoulders">Shoulders</option>
+        <option value="abs">Abs</option>
+        <option value="arms">Arms</option>
+        <option value="full-body">Full Body</option>
+      </select>
+      <input type="number" class="exercise-weight" min="0" step="1" placeholder="Weight" required />
+      <input type="number" class="exercise-reps" min="1" step="1" placeholder="Reps" required />
+      <input type="number" class="exercise-sets" min="1" step="1" placeholder="Sets" required />
+      <button type="button" class="danger-btn remove-exercise">Remove</button>
+    </div>
+  </template>
 
   <script src="app.js"></script>
 </body>
