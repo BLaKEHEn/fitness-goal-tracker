@@ -11,33 +11,45 @@
 </head>
 <body data-page="plan">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <h1>Split Plan</h1>
-        <p>Reference cycle and missed-day (X) compliance tracking.</p>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1>FitTrack</h1>
+        <p>Daily progress in 5 minutes.</p>
       </div>
-      <nav class="nav">
-        <a href="index.html" data-page="dashboard">Dashboard</a>
-        <a href="running.html" data-page="running">Running</a>
-        <a href="workouts.html" data-page="workouts">Workouts</a>
-        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
-        <a href="body.html" data-page="body">Body</a>
-        <a href="plan.html" data-page="plan">Split Plan</a>
+      <nav class="side-nav">
+        <a href="index.html" data-page="dashboard"><span class="nav-badge">D</span><span class="nav-label">Dashboard</span></a>
+        <a href="running.html" data-page="running"><span class="nav-badge">R</span><span class="nav-label">Running</span></a>
+        <a href="workouts.html" data-page="workouts"><span class="nav-badge">W</span><span class="nav-label">Workouts</span></a>
+        <a href="nutrition.html" data-page="nutrition"><span class="nav-badge">N</span><span class="nav-label">Nutrition</span></a>
+        <a href="body.html" data-page="body"><span class="nav-badge">B</span><span class="nav-label">Body</span></a>
+        <a href="plan.html" data-page="plan"><span class="nav-badge">S</span><span class="nav-label">Split Plan</span></a>
       </nav>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel span-2">
-        <h2>6-Week Split Chart</h2>
-        <p id="planMeta" class="subtle"></p>
-        <div class="table-wrap"><table id="planTable"></table></div>
-      </section>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <section class="panel span-2">
-        <h2>Missed Planned Workouts</h2>
-        <div id="planCompliance" class="list"></div>
-      </section>
-    </main>
+    <div class="content-shell">
+      <header class="page-header">
+        <button type="button" class="icon-btn" id="sidebarToggle">☰</button>
+        <div>
+          <h2>Split Plan</h2>
+          <p class="subtle">Weekly schedule and missed-day compliance.</p>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel span-2">
+          <h3>6-Week Split Chart</h3>
+          <p id="planMeta" class="subtle"></p>
+          <div class="table-wrap"><table id="planTable"></table></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Missed Planned Workouts</h3>
+          <div id="planCompliance" class="list"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script src="app.js"></script>

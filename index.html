@@ -11,37 +11,59 @@
 </head>
 <body data-page="dashboard">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
         <h1>FitTrack</h1>
-        <p>In-depth training dashboard with dedicated pages.</p>
+        <p>Daily progress in 5 minutes.</p>
       </div>
-      <nav class="nav">
-        <a href="index.html" data-page="dashboard">Dashboard</a>
-        <a href="running.html" data-page="running">Running</a>
-        <a href="workouts.html" data-page="workouts">Workouts</a>
-        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
-        <a href="body.html" data-page="body">Body</a>
-        <a href="plan.html" data-page="plan">Split Plan</a>
+      <nav class="side-nav">
+        <a href="index.html" data-page="dashboard"><span class="nav-badge">D</span><span class="nav-label">Dashboard</span></a>
+        <a href="running.html" data-page="running"><span class="nav-badge">R</span><span class="nav-label">Running</span></a>
+        <a href="workouts.html" data-page="workouts"><span class="nav-badge">W</span><span class="nav-label">Workouts</span></a>
+        <a href="nutrition.html" data-page="nutrition"><span class="nav-badge">N</span><span class="nav-label">Nutrition</span></a>
+        <a href="body.html" data-page="body"><span class="nav-badge">B</span><span class="nav-label">Body</span></a>
+        <a href="plan.html" data-page="plan"><span class="nav-badge">S</span><span class="nav-label">Split Plan</span></a>
       </nav>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel span-2">
-        <h2>Today</h2>
-        <div id="dashboardToday" class="list"></div>
-      </section>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <section class="panel span-2">
-        <h2>Overall Metrics</h2>
-        <div id="dashboardMetrics" class="metrics"></div>
-      </section>
+    <div class="content-shell">
+      <header class="page-header">
+        <button type="button" class="icon-btn" id="sidebarToggle">☰</button>
+        <div>
+          <h2>Dashboard</h2>
+          <p class="subtle">Fast overview of run, workout, nutrition, and body progress.</p>
+        </div>
+      </header>
 
-      <section class="panel span-2">
-        <h2>Recent Logs</h2>
-        <div id="dashboardRecent" class="list"></div>
-      </section>
-    </main>
+      <main class="grid">
+        <section class="panel span-2">
+          <h3>Today Snapshot</h3>
+          <div id="dashboardToday" class="list"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Quick 5-Minute Checklist</h3>
+          <div id="dashboardChecklist" class="list"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Overall Metrics</h3>
+          <div id="dashboardMetrics" class="metrics"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>AI Lift Targets</h3>
+          <div id="dashboardAiGoals" class="list"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Recent Logs</h3>
+          <div id="dashboardRecent" class="list"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script src="app.js"></script>

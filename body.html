@@ -11,46 +11,58 @@
 </head>
 <body data-page="body">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <h1>Body Progress</h1>
-        <p>Track weight, measurements, and daily photos.</p>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1>FitTrack</h1>
+        <p>Daily progress in 5 minutes.</p>
       </div>
-      <nav class="nav">
-        <a href="index.html" data-page="dashboard">Dashboard</a>
-        <a href="running.html" data-page="running">Running</a>
-        <a href="workouts.html" data-page="workouts">Workouts</a>
-        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
-        <a href="body.html" data-page="body">Body</a>
-        <a href="plan.html" data-page="plan">Split Plan</a>
+      <nav class="side-nav">
+        <a href="index.html" data-page="dashboard"><span class="nav-badge">D</span><span class="nav-label">Dashboard</span></a>
+        <a href="running.html" data-page="running"><span class="nav-badge">R</span><span class="nav-label">Running</span></a>
+        <a href="workouts.html" data-page="workouts"><span class="nav-badge">W</span><span class="nav-label">Workouts</span></a>
+        <a href="nutrition.html" data-page="nutrition"><span class="nav-badge">N</span><span class="nav-label">Nutrition</span></a>
+        <a href="body.html" data-page="body"><span class="nav-badge">B</span><span class="nav-label">Body</span></a>
+        <a href="plan.html" data-page="plan"><span class="nav-badge">S</span><span class="nav-label">Split Plan</span></a>
       </nav>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel">
-        <h2>Body Entry</h2>
-        <form id="bodyForm" class="stack">
-          <label>Date<input type="date" id="bodyDate" required /></label>
-          <label>Weight (lb)<input type="number" id="bodyWeight" min="0" step="0.1" required /></label>
-          <label>Waist (in)<input type="number" id="bodyWaist" min="0" step="0.1" /></label>
-          <label>Chest (in)<input type="number" id="bodyChest" min="0" step="0.1" /></label>
-          <label>Arms (in)<input type="number" id="bodyArms" min="0" step="0.1" /></label>
-          <label>Legs (in)<input type="number" id="bodyLegs" min="0" step="0.1" /></label>
-          <label>Progress photo<input type="file" id="bodyPhoto" accept="image/*" /></label>
-          <button type="submit">Save Body Entry</button>
-        </form>
-      </section>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <section class="panel span-2">
-        <h2>Body Metrics</h2>
-        <div id="bodyMetrics" class="metrics"></div>
-      </section>
+    <div class="content-shell">
+      <header class="page-header">
+        <button type="button" class="icon-btn" id="sidebarToggle">☰</button>
+        <div>
+          <h2>Body Progress</h2>
+          <p class="subtle">Track measurements, weight, and progress photos.</p>
+        </div>
+      </header>
 
-      <section class="panel span-2">
-        <h2>Body History + Photo Timeline</h2>
-        <div id="bodyHistory" class="list"></div>
-      </section>
-    </main>
+      <main class="grid">
+        <section class="panel">
+          <h3>Body Entry</h3>
+          <form id="bodyForm" class="stack">
+            <label>Date<input type="date" id="bodyDate" required /></label>
+            <label>Weight (lb)<input type="number" id="bodyWeight" min="0" step="0.1" required /></label>
+            <label>Waist (in)<input type="number" id="bodyWaist" min="0" step="0.1" /></label>
+            <label>Chest (in)<input type="number" id="bodyChest" min="0" step="0.1" /></label>
+            <label>Arms (in)<input type="number" id="bodyArms" min="0" step="0.1" /></label>
+            <label>Legs (in)<input type="number" id="bodyLegs" min="0" step="0.1" /></label>
+            <label>Progress photo<input type="file" id="bodyPhoto" accept="image/*" /></label>
+            <button type="submit">Save Body Entry</button>
+          </form>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Body Metrics</h3>
+          <div id="bodyMetrics" class="metrics"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Body History + Photo Timeline</h3>
+          <div id="bodyHistory" class="list"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script src="app.js"></script>

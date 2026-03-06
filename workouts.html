@@ -11,75 +11,93 @@
 </head>
 <body data-page="workouts">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <h1>Workouts</h1>
-        <p>6-day split planning, daily targets, and exercise progression.</p>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1>FitTrack</h1>
+        <p>Daily progress in 5 minutes.</p>
       </div>
-      <nav class="nav">
-        <a href="index.html" data-page="dashboard">Dashboard</a>
-        <a href="running.html" data-page="running">Running</a>
-        <a href="workouts.html" data-page="workouts">Workouts</a>
-        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
-        <a href="body.html" data-page="body">Body</a>
-        <a href="plan.html" data-page="plan">Split Plan</a>
+      <nav class="side-nav">
+        <a href="index.html" data-page="dashboard"><span class="nav-badge">D</span><span class="nav-label">Dashboard</span></a>
+        <a href="running.html" data-page="running"><span class="nav-badge">R</span><span class="nav-label">Running</span></a>
+        <a href="workouts.html" data-page="workouts"><span class="nav-badge">W</span><span class="nav-label">Workouts</span></a>
+        <a href="nutrition.html" data-page="nutrition"><span class="nav-badge">N</span><span class="nav-label">Nutrition</span></a>
+        <a href="body.html" data-page="body"><span class="nav-badge">B</span><span class="nav-label">Body</span></a>
+        <a href="plan.html" data-page="plan"><span class="nav-badge">S</span><span class="nav-label">Split Plan</span></a>
       </nav>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel">
-        <h2>Workout Goals</h2>
-        <form id="workoutGoalForm" class="stack">
-          <label>Workout days per week<input type="number" id="workoutGoalDaysPerWeek" min="1" max="7" required /></label>
-          <label>Workout sessions per month<input type="number" id="workoutGoalSessionsPerMonth" min="4" step="1" required /></label>
-          <button type="submit">Save Workout Goals</button>
-        </form>
-      </section>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <section class="panel">
-        <h2>Workout Log</h2>
-        <form id="workoutLogForm" class="stack">
-          <label>Date<input type="date" id="workoutDate" required /></label>
-          <label>Planned focus<input type="text" id="workoutPlanned" readonly /></label>
-          <label>Completed workout?
-            <select id="workoutDone" required>
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
-          </label>
-          <div>
-            <div class="row-head">
-              <strong>Exercise Tracker (Weight/Reps/Sets)</strong>
-              <button type="button" id="addExerciseBtn" class="secondary">Add Exercise</button>
+    <div class="content-shell">
+      <header class="page-header">
+        <button type="button" class="icon-btn" id="sidebarToggle">☰</button>
+        <div>
+          <h2>Workouts</h2>
+          <p class="subtle">Log lifts and use AI-assisted next-session + month-end targets.</p>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel">
+          <h3>Workout Goals</h3>
+          <form id="workoutGoalForm" class="stack">
+            <label>Workout days per week<input type="number" id="workoutGoalDaysPerWeek" min="1" max="7" required /></label>
+            <label>Workout sessions per month<input type="number" id="workoutGoalSessionsPerMonth" min="4" step="1" required /></label>
+            <button type="submit">Save Workout Goals</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h3>Workout Log</h3>
+          <form id="workoutLogForm" class="stack">
+            <label>Date<input type="date" id="workoutDate" required /></label>
+            <label>Planned focus<input type="text" id="workoutPlanned" readonly /></label>
+            <label>Completed workout?
+              <select id="workoutDone" required>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <div>
+              <div class="row-head">
+                <strong>Exercise Tracker (Weight/Reps/Sets)</strong>
+                <button type="button" id="addExerciseBtn" class="secondary">Add Exercise</button>
+              </div>
+              <div id="exerciseRows" class="exercise-rows"></div>
             </div>
-            <div id="exerciseRows" class="exercise-rows"></div>
-          </div>
-          <label>Notes<textarea id="workoutNotes" rows="3"></textarea></label>
-          <button type="submit">Save Workout Log</button>
-        </form>
-      </section>
+            <label>Notes<textarea id="workoutNotes" rows="3"></textarea></label>
+            <button type="submit">Save Workout Log</button>
+          </form>
+        </section>
 
-      <section class="panel span-2">
-        <h2>Workout Metrics</h2>
-        <div id="workoutMetrics" class="metrics"></div>
-      </section>
+        <section class="panel span-2">
+          <h3>Workout Metrics</h3>
+          <div id="workoutMetrics" class="metrics"></div>
+        </section>
 
-      <section class="panel span-2">
-        <h2>Workout Split Table</h2>
-        <p id="workoutPlanMeta" class="subtle"></p>
-        <div class="table-wrap"><table id="workoutPlanTable"></table></div>
-      </section>
+        <section class="panel span-2">
+          <h3>AI Goal Coach</h3>
+          <p class="subtle">Targets are generated from your baseline and latest logged sets. Edit and save any goal.</p>
+          <div id="aiGoalList" class="list"></div>
+        </section>
 
-      <section class="panel span-2">
-        <h2>Exercise Baseline vs Latest</h2>
-        <div id="workoutProgress" class="list"></div>
-      </section>
+        <section class="panel span-2">
+          <h3>Workout Split Table</h3>
+          <p id="workoutPlanMeta" class="subtle"></p>
+          <div class="table-wrap"><table id="workoutPlanTable"></table></div>
+        </section>
 
-      <section class="panel span-2">
-        <h2>Workout History</h2>
-        <div id="workoutHistory" class="list"></div>
-      </section>
-    </main>
+        <section class="panel span-2">
+          <h3>Exercise Baseline vs Latest</h3>
+          <div id="workoutProgress" class="list"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Workout History</h3>
+          <div id="workoutHistory" class="list"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <template id="exerciseRowTemplate">

@@ -1,4 +1,5 @@
 const STORAGE_KEY = "fittrack-data-v4";
+const SIDEBAR_PREF_KEY = "fittrack-sidebar-collapsed";
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const SPLIT_PLAN = [
   ["LEGS", "CHEST", "BACK", "SHOULDERS", "ABS", "ARMS", "X"],
@@ -22,6 +23,7 @@ const defaultState = {
     foodProtein: 180,
     foodWater: 100,
   },
+  customExerciseGoals: {},
   dailyLogs: [],
   bodyLogs: [],
 };
@@ -31,6 +33,7 @@ let state = loadState();
 init();
 
 function init() {
+  initShell();
   setActiveNav();
   bindGoalForms();
   bindRunningPage();
@@ -40,14 +43,50 @@ function init() {
   renderAll();
 }
 
+function initShell() {
+  const toggle = document.getElementById("sidebarToggle");
+  const overlay = document.getElementById("sidebarOverlay");
+
+  if (window.innerWidth > 1024 && localStorage.getItem(SIDEBAR_PREF_KEY) === "1") {
+    document.body.classList.add("sidebar-collapsed");
+  }
+
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      if (window.innerWidth <= 1024) {
+        document.body.classList.toggle("sidebar-open");
+        return;
+      }
+
+      document.body.classList.toggle("sidebar-collapsed");
+      const isCollapsed = document.body.classList.contains("sidebar-collapsed");
+      localStorage.setItem(SIDEBAR_PREF_KEY, isCollapsed ? "1" : "0");
+    });
+  }
+
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      document.body.classList.remove("sidebar-open");
+    });
+  }
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 1024) {
+      document.body.classList.remove("sidebar-open");
+    }
+  });
+}
+
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return structuredClone(defaultState);
+
   try {
     const parsed = JSON.parse(raw);
     return {
       programStartDate: parsed.programStartDate || defaultState.programStartDate,
       goals: { ...defaultState.goals, ...(parsed.goals || {}) },
+      customExerciseGoals: parsed.customExerciseGoals || {},
       dailyLogs: Array.isArray(parsed.dailyLogs) ? parsed.dailyLogs : [],
       bodyLogs: Array.isArray(parsed.bodyLogs) ? parsed.bodyLogs : [],
     };
@@ -62,7 +101,7 @@ function persist() {
 
 function setActiveNav() {
   const page = document.body.dataset.page;
-  document.querySelectorAll(".nav a").forEach((link) => {
+  document.querySelectorAll(".side-nav a").forEach((link) => {
     if (link.dataset.page === page) link.classList.add("active");
   });
 }
@@ -175,12 +214,17 @@ function bindWorkoutPage() {
 
   const dateInput = document.getElementById("workoutDate");
   const addBtn = document.getElementById("addExerciseBtn");
+  const aiGoalList = document.getElementById("aiGoalList");
 
   dateInput.value = getDateId(new Date());
   hydrateWorkoutLogInputs();
 
   addBtn.addEventListener("click", () => addExerciseRow());
   dateInput.addEventListener("change", hydrateWorkoutLogInputs);
+
+  if (aiGoalList) {
+    aiGoalList.addEventListener("submit", onSaveCustomAiGoal);
+  }
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -218,10 +262,35 @@ function hydrateWorkoutLogInputs() {
 
   clearExerciseRows();
   if (existing?.exercises?.length) {
-    existing.exercises.forEach((ex) => addExerciseRow(ex));
+    existing.exercises.forEach((exercise) => addExerciseRow(exercise));
   } else {
     addExerciseRow();
   }
+}
+
+function onSaveCustomAiGoal(event) {
+  const form = event.target.closest(".ai-goal-form");
+  if (!form) return;
+
+  event.preventDefault();
+
+  const key = decodeURIComponent(form.dataset.exerciseKey || "");
+  const nextWeight = Number(form.querySelector(".ai-next-weight").value);
+  const nextReps = Number(form.querySelector(".ai-next-reps").value);
+  const monthWeight = Number(form.querySelector(".ai-month-weight").value);
+  const monthReps = Number(form.querySelector(".ai-month-reps").value);
+
+  if (!state.customExerciseGoals) state.customExerciseGoals = {};
+  state.customExerciseGoals[key] = {
+    nextWeight: Number.isFinite(nextWeight) ? nextWeight : 0,
+    nextReps: Number.isFinite(nextReps) ? nextReps : 0,
+    monthWeight: Number.isFinite(monthWeight) ? monthWeight : 0,
+    monthReps: Number.isFinite(monthReps) ? monthReps : 0,
+    updatedAt: getDateId(new Date()),
+  };
+
+  persist();
+  renderAll();
 }
 
 function addExerciseRow(data = {}) {
@@ -350,7 +419,7 @@ function bindBodyPage() {
 function hydrateBodyInputs() {
   const dateId = getValue("bodyDate");
   if (!dateId) return;
-  const existing = state.bodyLogs.find((item) => item.dateId === dateId);
+  const existing = state.bodyLogs.find((entry) => entry.dateId === dateId);
 
   setValue("bodyWeight", existing?.weight ?? "");
   setValue("bodyWaist", existing?.waist ?? "");
@@ -384,6 +453,7 @@ function renderDashboard() {
 
   const todayId = getDateId(new Date());
   const today = findDailyLog(todayId);
+  const todayBody = state.bodyLogs.find((entry) => entry.dateId === todayId);
   const week = getPeriodStats("week");
   const month = getPeriodStats("month");
 
@@ -399,15 +469,60 @@ function renderDashboard() {
   const todayEl = document.getElementById("dashboardToday");
   if (todayEl) {
     todayEl.innerHTML = `
-      <div class="card">
+      <article class="card">
         <div class="card-title">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
         <div>Planned focus: ${escapeHtml(getPlannedFocusForDate(todayId))}</div>
         <div class="subtle">Log status: ${today ? "Saved" : "Pending"}</div>
-      </div>
+      </article>
     `;
   }
 
+  const checklistEl = document.getElementById("dashboardChecklist");
+  if (checklistEl) {
+    const checklist = [
+      checklistCard("Run logged", Boolean(today && (today.runMiles > 0 || today.runMinutes > 0)), `Target ${state.goals.runDailyMiles} mi`),
+      checklistCard("Workout logged", Boolean(today && (today.workoutDone || (today.exercises || []).length)), getPlannedFocusForDate(todayId)),
+      checklistCard("Nutrition logged", Boolean(today && (today.foodCalories > 0 || today.foodProtein > 0 || today.foodWater > 0)), `Calorie goal ${state.goals.foodCalories}`),
+      checklistCard("Body check-in logged", Boolean(todayBody), "Weight + measurements"),
+    ];
+    checklistEl.innerHTML = checklist.join("");
+  }
+
+  renderDashboardAiGoals();
   renderLogList("dashboardRecent", state.dailyLogs, 6);
+}
+
+function renderDashboardAiGoals() {
+  const target = document.getElementById("dashboardAiGoals");
+  if (!target) return;
+
+  const rows = buildAiGoalRows();
+  if (!rows.length) {
+    target.innerHTML = "<p>No AI lift targets yet. Log at least one workout exercise first.</p>";
+    return;
+  }
+
+  target.innerHTML = rows.slice(0, 6).map((row) => {
+    const sourceLabel = row.isCustom ? "Custom" : "AI";
+    return `
+      <article class="card">
+        <div class="card-title">${escapeHtml(row.displayName)} <span class="subtle">(${sourceLabel})</span></div>
+        <div>Next session: ${formatWeight(row.goal.nextWeight)} lb x ${row.goal.nextReps}</div>
+        <div>End of month: ${formatWeight(row.goal.monthWeight)} lb x ${row.goal.monthReps}</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function checklistCard(title, done, detail) {
+  const mark = done ? "Done" : "Pending";
+  return `
+    <article class="card">
+      <div class="card-title">${escapeHtml(title)}</div>
+      <div>${mark}</div>
+      <div class="subtle">${escapeHtml(detail)}</div>
+    </article>
+  `;
 }
 
 function renderRunningPage() {
@@ -439,12 +554,110 @@ function renderWorkoutPage() {
     metricCard("Month Sessions", `${month.workoutDays}/${state.goals.workoutSessionsPerMonth}`, progressPercent(month.workoutDays, state.goals.workoutSessionsPerMonth), `${month.exerciseCount} exercise entries`),
   ].join("");
 
+  renderAiGoalCoach();
   renderWorkoutTable("workoutPlanMeta", "workoutPlanTable");
   renderExerciseProgress("workoutProgress");
   renderLogList("workoutHistory", state.dailyLogs.filter((log) => log.workoutDone || (log.exercises || []).length), 20, (log) => {
     const count = (log.exercises || []).length;
     return `Workout: ${log.workoutDone ? "Done" : "Missed"} | Focus: ${log.plannedFocus || "N/A"} | Exercises: ${count}`;
   });
+}
+
+function renderAiGoalCoach() {
+  const target = document.getElementById("aiGoalList");
+  if (!target) return;
+
+  const rows = buildAiGoalRows();
+  if (!rows.length) {
+    target.innerHTML = "<p>No exercise baseline yet. Log one exercise and save to generate AI targets.</p>";
+    return;
+  }
+
+  target.innerHTML = rows.map((row) => `
+    <form class="card ai-goal-form" data-exercise-key="${encodeURIComponent(row.key)}">
+      <div class="card-title">${escapeHtml(row.displayName)} <span class="subtle">(${escapeHtml(row.muscle)})</span></div>
+      <div class="subtle">Baseline: ${formatWeight(row.baseline.weight)} lb x ${row.baseline.reps}</div>
+      <div class="subtle">Latest: ${formatWeight(row.latest.weight)} lb x ${row.latest.reps}</div>
+      <div class="ai-goal-grid">
+        <label>Next session weight<input class="ai-next-weight" type="number" min="0" step="0.5" value="${row.goal.nextWeight}" required /></label>
+        <label>Next session reps<input class="ai-next-reps" type="number" min="1" step="1" value="${row.goal.nextReps}" required /></label>
+        <label>Month-end weight<input class="ai-month-weight" type="number" min="0" step="0.5" value="${row.goal.monthWeight}" required /></label>
+        <label>Month-end reps<input class="ai-month-reps" type="number" min="1" step="1" value="${row.goal.monthReps}" required /></label>
+      </div>
+      <div class="row-head">
+        <span class="subtle">Source: ${row.isCustom ? "Custom override" : "AI suggestion"}</span>
+        <button type="submit" class="secondary">Save Goal Override</button>
+      </div>
+    </form>
+  `).join("");
+}
+
+function buildAiGoalRows() {
+  const progressMap = buildExerciseProgressMap();
+  const names = Object.keys(progressMap).sort((a, b) => a.localeCompare(b));
+
+  return names.map((displayName) => {
+    const progress = progressMap[displayName];
+    const key = normalizeExerciseKey(displayName);
+    const suggestion = suggestExerciseGoals(progress);
+    const custom = state.customExerciseGoals?.[key];
+
+    const goal = custom ? {
+      nextWeight: custom.nextWeight,
+      nextReps: custom.nextReps,
+      monthWeight: custom.monthWeight,
+      monthReps: custom.monthReps,
+    } : suggestion;
+
+    return {
+      key,
+      displayName,
+      muscle: progress.latest.muscle,
+      baseline: progress.baseline,
+      latest: progress.latest,
+      goal,
+      isCustom: Boolean(custom),
+    };
+  });
+}
+
+function suggestExerciseGoals(progress) {
+  const baselineWeight = Number(progress.baseline.weight || 0);
+  const latestWeight = Number(progress.latest.weight || 0);
+  const baselineReps = Number(progress.baseline.reps || 0);
+  const latestReps = Number(progress.latest.reps || 0);
+
+  const step = getWeightStep(Math.max(baselineWeight, latestWeight));
+  const workingWeight = Math.max(baselineWeight, latestWeight);
+  const workingReps = Math.max(baselineReps, latestReps, 1);
+
+  const nextWeight = roundToStep(workingWeight + step, step);
+  const nextReps = Math.min(15, workingReps + 1);
+  const monthWeight = roundToStep(nextWeight + step * 3, step);
+  const monthReps = Math.min(20, nextReps + 2);
+
+  return { nextWeight, nextReps, monthWeight, monthReps };
+}
+
+function getWeightStep(weight) {
+  if (weight >= 225) return 10;
+  if (weight >= 95) return 5;
+  return 2.5;
+}
+
+function roundToStep(value, step) {
+  if (!step) return value;
+  const rounded = Math.round(value / step) * step;
+  return Number(rounded.toFixed(step === 2.5 ? 1 : 0));
+}
+
+function formatWeight(value) {
+  const num = Number(value || 0);
+  return Number.isInteger(num) ? String(num) : num.toFixed(1);
+}
+
+function normalizeExerciseKey(name) {
+  return name.trim().toLowerCase();
 }
 
 function renderNutritionPage() {
@@ -556,15 +769,15 @@ function renderExerciseProgress(targetId) {
 
   target.innerHTML = names.map((name) => {
     const item = map[name];
-    const wd = item.latest.weight - item.baseline.weight;
-    const rd = item.latest.reps - item.baseline.reps;
+    const weightDelta = item.latest.weight - item.baseline.weight;
+    const repsDelta = item.latest.reps - item.baseline.reps;
 
     return `
       <article class="card">
         <div class="card-title">${escapeHtml(name)} (${escapeHtml(item.latest.muscle)})</div>
         <div>Baseline: ${item.baseline.weight} lb x ${item.baseline.reps}</div>
         <div>Latest: ${item.latest.weight} lb x ${item.latest.reps}</div>
-        <div class="subtle">Change: ${formatDelta(wd)} lb, ${formatDelta(rd)} reps</div>
+        <div class="subtle">Change: ${formatDelta(weightDelta)} lb, ${formatDelta(repsDelta)} reps</div>
       </article>
     `;
   }).join("");
@@ -576,7 +789,7 @@ function buildExerciseProgressMap() {
 
   logsAsc.forEach((log) => {
     (log.exercises || []).forEach((exercise) => {
-      const key = exercise.name.trim().toLowerCase();
+      const key = normalizeExerciseKey(exercise.name);
       if (!key) return;
       if (!map[key]) map[key] = { displayName: exercise.name, baseline: exercise, latest: exercise };
       map[key].latest = exercise;
@@ -697,8 +910,8 @@ function progressPercent(current, target) {
 }
 
 function upsertByDate(arr, entry) {
-  const i = arr.findIndex((item) => item.dateId === entry.dateId);
-  if (i >= 0) arr[i] = { ...arr[i], ...entry };
+  const index = arr.findIndex((item) => item.dateId === entry.dateId);
+  if (index >= 0) arr[index] = { ...arr[index], ...entry };
   else arr.push(entry);
 }
 
@@ -711,13 +924,13 @@ function findDailyLog(dateId) {
 }
 
 function setValue(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.value = value;
+  const element = document.getElementById(id);
+  if (element) element.value = value;
 }
 
 function getValue(id) {
-  const el = document.getElementById(id);
-  return el ? el.value : "";
+  const element = document.getElementById(id);
+  return element ? element.value : "";
 }
 
 function getDateId(date) {

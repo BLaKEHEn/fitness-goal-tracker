@@ -11,53 +11,65 @@
 </head>
 <body data-page="nutrition">
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <h1>Nutrition</h1>
-        <p>Daily calorie/protein/water goals and tracking.</p>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1>FitTrack</h1>
+        <p>Daily progress in 5 minutes.</p>
       </div>
-      <nav class="nav">
-        <a href="index.html" data-page="dashboard">Dashboard</a>
-        <a href="running.html" data-page="running">Running</a>
-        <a href="workouts.html" data-page="workouts">Workouts</a>
-        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
-        <a href="body.html" data-page="body">Body</a>
-        <a href="plan.html" data-page="plan">Split Plan</a>
+      <nav class="side-nav">
+        <a href="index.html" data-page="dashboard"><span class="nav-badge">D</span><span class="nav-label">Dashboard</span></a>
+        <a href="running.html" data-page="running"><span class="nav-badge">R</span><span class="nav-label">Running</span></a>
+        <a href="workouts.html" data-page="workouts"><span class="nav-badge">W</span><span class="nav-label">Workouts</span></a>
+        <a href="nutrition.html" data-page="nutrition"><span class="nav-badge">N</span><span class="nav-label">Nutrition</span></a>
+        <a href="body.html" data-page="body"><span class="nav-badge">B</span><span class="nav-label">Body</span></a>
+        <a href="plan.html" data-page="plan"><span class="nav-badge">S</span><span class="nav-label">Split Plan</span></a>
       </nav>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel">
-        <h2>Nutrition Goals</h2>
-        <form id="nutritionGoalForm" class="stack">
-          <label>Daily calories<input type="number" id="nutritionGoalCalories" min="1000" step="50" required /></label>
-          <label>Daily protein (g)<input type="number" id="nutritionGoalProtein" min="50" step="5" required /></label>
-          <label>Daily water (oz)<input type="number" id="nutritionGoalWater" min="16" step="8" required /></label>
-          <button type="submit">Save Nutrition Goals</button>
-        </form>
-      </section>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <section class="panel">
-        <h2>Nutrition Log</h2>
-        <form id="nutritionLogForm" class="stack">
-          <label>Date<input type="date" id="nutritionDate" required /></label>
-          <label>Calories<input type="number" id="nutritionCalories" min="0" step="1" required /></label>
-          <label>Protein (g)<input type="number" id="nutritionProtein" min="0" step="1" required /></label>
-          <label>Water (oz)<input type="number" id="nutritionWater" min="0" step="1" required /></label>
-          <button type="submit">Save Nutrition Log</button>
-        </form>
-      </section>
+    <div class="content-shell">
+      <header class="page-header">
+        <button type="button" class="icon-btn" id="sidebarToggle">☰</button>
+        <div>
+          <h2>Nutrition</h2>
+          <p class="subtle">Set daily intake targets and log meals quickly.</p>
+        </div>
+      </header>
 
-      <section class="panel span-2">
-        <h2>Nutrition Metrics</h2>
-        <div id="nutritionMetrics" class="metrics"></div>
-      </section>
+      <main class="grid">
+        <section class="panel">
+          <h3>Nutrition Goals</h3>
+          <form id="nutritionGoalForm" class="stack">
+            <label>Daily calories<input type="number" id="nutritionGoalCalories" min="1000" step="50" required /></label>
+            <label>Daily protein (g)<input type="number" id="nutritionGoalProtein" min="50" step="5" required /></label>
+            <label>Daily water (oz)<input type="number" id="nutritionGoalWater" min="16" step="8" required /></label>
+            <button type="submit">Save Nutrition Goals</button>
+          </form>
+        </section>
 
-      <section class="panel span-2">
-        <h2>Nutrition History</h2>
-        <div id="nutritionHistory" class="list"></div>
-      </section>
-    </main>
+        <section class="panel">
+          <h3>Nutrition Log</h3>
+          <form id="nutritionLogForm" class="stack">
+            <label>Date<input type="date" id="nutritionDate" required /></label>
+            <label>Calories<input type="number" id="nutritionCalories" min="0" step="1" required /></label>
+            <label>Protein (g)<input type="number" id="nutritionProtein" min="0" step="1" required /></label>
+            <label>Water (oz)<input type="number" id="nutritionWater" min="0" step="1" required /></label>
+            <button type="submit">Save Nutrition Log</button>
+          </form>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Nutrition Metrics</h3>
+          <div id="nutritionMetrics" class="metrics"></div>
+        </section>
+
+        <section class="panel span-2">
+          <h3>Nutrition History</h3>
+          <div id="nutritionHistory" class="list"></div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script src="app.js"></script>
