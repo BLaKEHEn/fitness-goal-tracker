@@ -1,10 +1,11 @@
-const STORAGE_KEY = "fittrack-data-v1";
+const STORAGE_KEY = "fittrack-data-v2";
 
 const defaultState = {
   goals: {
-    stepsPerDay: 8000,
-    workoutsPerWeek: 4,
-    waterOzPerDay: 80,
+    runMilesPerWeek: 10,
+    runDaysPerWeek: 3,
+    workoutSessionsPerWeek: 4,
+    workoutMinutesPerWeek: 180,
   },
   logs: [],
 };
@@ -28,9 +29,7 @@ function init() {
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return structuredClone(defaultState);
-  }
+  if (!raw) return structuredClone(defaultState);
 
   try {
     const parsed = JSON.parse(raw);
@@ -50,9 +49,10 @@ function persist() {
 function onSaveGoals(event) {
   event.preventDefault();
   state.goals = {
-    stepsPerDay: Number(document.getElementById("goalSteps").value),
-    workoutsPerWeek: Number(document.getElementById("goalWorkouts").value),
-    waterOzPerDay: Number(document.getElementById("goalWater").value),
+    runMilesPerWeek: Number(document.getElementById("goalRunMiles").value),
+    runDaysPerWeek: Number(document.getElementById("goalRunDays").value),
+    workoutSessionsPerWeek: Number(document.getElementById("goalWorkoutSessions").value),
+    workoutMinutesPerWeek: Number(document.getElementById("goalWorkoutMinutes").value),
   };
   persist();
   render();
@@ -69,9 +69,10 @@ function onSaveLog(event) {
       day: "numeric",
       year: "numeric",
     }),
-    steps: Number(document.getElementById("logSteps").value),
-    workoutCompleted: document.getElementById("logWorkout").value === "yes",
-    waterOz: Number(document.getElementById("logWater").value),
+    runMiles: Number(document.getElementById("logRunMiles").value),
+    runDone: document.getElementById("logRunDone").value === "yes",
+    workoutDone: document.getElementById("logWorkoutDone").value === "yes",
+    workoutMinutes: Number(document.getElementById("logWorkoutMinutes").value),
     notes: document.getElementById("logNotes").value.trim(),
   };
 
@@ -88,19 +89,21 @@ function onSaveLog(event) {
 }
 
 function hydrateGoalInputs() {
-  document.getElementById("goalSteps").value = state.goals.stepsPerDay;
-  document.getElementById("goalWorkouts").value = state.goals.workoutsPerWeek;
-  document.getElementById("goalWater").value = state.goals.waterOzPerDay;
+  document.getElementById("goalRunMiles").value = state.goals.runMilesPerWeek;
+  document.getElementById("goalRunDays").value = state.goals.runDaysPerWeek;
+  document.getElementById("goalWorkoutSessions").value = state.goals.workoutSessionsPerWeek;
+  document.getElementById("goalWorkoutMinutes").value = state.goals.workoutMinutesPerWeek;
 }
 
 function hydrateTodayLogInputs() {
   const todayId = getDateId(new Date());
   const todayLog = state.logs.find((log) => log.dateId === todayId);
-
   if (!todayLog) return;
-  document.getElementById("logSteps").value = todayLog.steps;
-  document.getElementById("logWorkout").value = todayLog.workoutCompleted ? "yes" : "no";
-  document.getElementById("logWater").value = todayLog.waterOz;
+
+  document.getElementById("logRunMiles").value = todayLog.runMiles;
+  document.getElementById("logRunDone").value = todayLog.runDone ? "yes" : "no";
+  document.getElementById("logWorkoutDone").value = todayLog.workoutDone ? "yes" : "no";
+  document.getElementById("logWorkoutMinutes").value = todayLog.workoutMinutes;
   document.getElementById("logNotes").value = todayLog.notes || "";
 }
 
@@ -113,7 +116,7 @@ function render() {
 function renderTodayCard() {
   const todayId = getDateId(new Date());
   const todayLog = state.logs.find((log) => log.dateId === todayId);
-  const workoutsThisWeek = getWorkoutsThisWeek();
+  const weekTotals = getWeekTotals();
 
   todayCardEl.innerHTML = `
     <strong>${new Date().toLocaleDateString(undefined, {
@@ -121,24 +124,25 @@ function renderTodayCard() {
       month: "long",
       day: "numeric",
     })}</strong>
-    <div>Week workouts: ${workoutsThisWeek}/${state.goals.workoutsPerWeek}</div>
+    <div>Running: ${weekTotals.runDays}/${state.goals.runDaysPerWeek} days</div>
+    <div>Workout: ${weekTotals.workoutSessions}/${state.goals.workoutSessionsPerWeek} sessions</div>
     <div>Today's log: ${todayLog ? "Saved" : "Not yet"}</div>
   `;
 }
 
 function renderMetrics() {
-  const todayId = getDateId(new Date());
-  const todayLog = state.logs.find((log) => log.dateId === todayId);
-  const workoutsThisWeek = getWorkoutsThisWeek();
+  const weekTotals = getWeekTotals();
 
-  const stepPct = progressPercent(todayLog?.steps ?? 0, state.goals.stepsPerDay);
-  const waterPct = progressPercent(todayLog?.waterOz ?? 0, state.goals.waterOzPerDay);
-  const workoutPct = progressPercent(workoutsThisWeek, state.goals.workoutsPerWeek);
+  const runMilesPct = progressPercent(weekTotals.runMiles, state.goals.runMilesPerWeek);
+  const runDaysPct = progressPercent(weekTotals.runDays, state.goals.runDaysPerWeek);
+  const workoutSessionsPct = progressPercent(weekTotals.workoutSessions, state.goals.workoutSessionsPerWeek);
+  const workoutMinutesPct = progressPercent(weekTotals.workoutMinutes, state.goals.workoutMinutesPerWeek);
 
   metricsEl.innerHTML = [
-    metricCard("Daily Steps", `${todayLog?.steps ?? 0} / ${state.goals.stepsPerDay}`, stepPct),
-    metricCard("Daily Water", `${todayLog?.waterOz ?? 0} oz / ${state.goals.waterOzPerDay} oz`, waterPct),
-    metricCard("Weekly Workouts", `${workoutsThisWeek} / ${state.goals.workoutsPerWeek}`, workoutPct),
+    metricCard("Running: Miles This Week", `${weekTotals.runMiles.toFixed(1)} / ${state.goals.runMilesPerWeek}`, runMilesPct),
+    metricCard("Running: Days This Week", `${weekTotals.runDays} / ${state.goals.runDaysPerWeek}`, runDaysPct),
+    metricCard("Workout: Sessions This Week", `${weekTotals.workoutSessions} / ${state.goals.workoutSessionsPerWeek}`, workoutSessionsPct),
+    metricCard("Workout: Minutes This Week", `${weekTotals.workoutMinutes} / ${state.goals.workoutMinutesPerWeek}`, workoutMinutesPct),
   ].join("");
 }
 
@@ -164,26 +168,35 @@ function renderHistory() {
   historyEl.innerHTML = state.logs.slice(0, 14).map((log) => `
     <article class="log-card">
       <div class="log-date">${log.displayDate}</div>
-      <div>Steps: ${log.steps}</div>
-      <div>Workout: ${log.workoutCompleted ? "Yes" : "No"}</div>
-      <div>Water: ${log.waterOz} oz</div>
+      <div>Running: ${log.runDone ? "Done" : "No run"} (${log.runMiles.toFixed(1)} mi)</div>
+      <div>Workout: ${log.workoutDone ? "Done" : "No workout"} (${log.workoutMinutes} min)</div>
       ${log.notes ? `<div class="log-notes">${escapeHtml(log.notes)}</div>` : ""}
     </article>
   `).join("");
 }
 
-function getWorkoutsThisWeek() {
+function getWeekTotals() {
   const now = new Date();
   const day = now.getDay();
   const sunday = new Date(now);
   sunday.setDate(now.getDate() - day);
   sunday.setHours(0, 0, 0, 0);
 
-  return state.logs.filter((log) => {
-    if (!log.workoutCompleted) return false;
+  return state.logs.reduce((totals, log) => {
     const d = new Date(log.dateId);
-    return d >= sunday && d <= now;
-  }).length;
+    if (d < sunday || d > now) return totals;
+
+    totals.runMiles += Number(log.runMiles || 0);
+    if (log.runDone) totals.runDays += 1;
+    if (log.workoutDone) totals.workoutSessions += 1;
+    totals.workoutMinutes += Number(log.workoutMinutes || 0);
+    return totals;
+  }, {
+    runMiles: 0,
+    runDays: 0,
+    workoutSessions: 0,
+    workoutMinutes: 0,
+  });
 }
 
 function progressPercent(current, target) {
