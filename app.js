@@ -1,7 +1,5 @@
-const STORAGE_KEY = "fittrack-data-v3";
-
+const STORAGE_KEY = "fittrack-data-v4";
 const WEEK_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
 const SPLIT_PLAN = [
   ["LEGS", "CHEST", "BACK", "SHOULDERS", "ABS", "ARMS", "X"],
   ["X", "LEGS", "CHEST", "BACK + SHOULDERS", "ABS", "ARMS", "X"],
@@ -28,44 +26,23 @@ const defaultState = {
   bodyLogs: [],
 };
 
-const goalForm = document.getElementById("goalForm");
-const dailyLogForm = document.getElementById("dailyLogForm");
-const bodyForm = document.getElementById("bodyForm");
-const todayCardEl = document.getElementById("todayCard");
-const metricsEl = document.getElementById("metrics");
-const historyEl = document.getElementById("history");
-const bodyHistoryEl = document.getElementById("bodyHistory");
-const planTableEl = document.getElementById("planTable");
-const planMetaEl = document.getElementById("planMeta");
-const exerciseProgressEl = document.getElementById("exerciseProgress");
-const addExerciseBtn = document.getElementById("addExerciseBtn");
-const exerciseRowsEl = document.getElementById("exerciseRows");
-
 let state = loadState();
 
 init();
 
 function init() {
-  setTodayDefaults();
-  hydrateGoalInputs();
-  hydrateDailyLogInputs();
-  hydrateBodyInputs();
-
-  addExerciseBtn.addEventListener("click", () => addExerciseRow());
-  goalForm.addEventListener("submit", onSaveGoals);
-  dailyLogForm.addEventListener("submit", onSaveDailyLog);
-  bodyForm.addEventListener("submit", onSaveBodyLog);
-  document.getElementById("logDate").addEventListener("change", hydrateDailyLogInputs);
-  document.getElementById("bodyDate").addEventListener("change", hydrateBodyInputs);
-
-  if (!exerciseRowsEl.children.length) addExerciseRow();
-  render();
+  setActiveNav();
+  bindGoalForms();
+  bindRunningPage();
+  bindWorkoutPage();
+  bindNutritionPage();
+  bindBodyPage();
+  renderAll();
 }
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return structuredClone(defaultState);
-
   try {
     const parsed = JSON.parse(raw);
     return {
@@ -83,167 +60,176 @@ function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function setTodayDefaults() {
-  const todayId = getDateId(new Date());
-  document.getElementById("logDate").value = todayId;
-  document.getElementById("bodyDate").value = todayId;
+function setActiveNav() {
+  const page = document.body.dataset.page;
+  document.querySelectorAll(".nav a").forEach((link) => {
+    if (link.dataset.page === page) link.classList.add("active");
+  });
 }
 
-function onSaveGoals(event) {
-  event.preventDefault();
-  state.goals = {
-    runDailyMiles: Number(document.getElementById("goalRunDailyMiles").value),
-    runDailyMinutes: Number(document.getElementById("goalRunDailyMinutes").value),
-    runWeeklyMiles: Number(document.getElementById("goalRunWeeklyMiles").value),
-    runMonthlyMiles: Number(document.getElementById("goalRunMonthlyMiles").value),
-    workoutDaysPerWeek: Number(document.getElementById("goalWorkoutDaysPerWeek").value),
-    workoutSessionsPerMonth: Number(document.getElementById("goalWorkoutSessionsPerMonth").value),
-    foodCalories: Number(document.getElementById("goalFoodCalories").value),
-    foodProtein: Number(document.getElementById("goalFoodProtein").value),
-    foodWater: Number(document.getElementById("goalFoodWater").value),
-  };
-  persist();
-  render();
+function bindGoalForms() {
+  bindRunGoalForm();
+  bindWorkoutGoalForm();
+  bindNutritionGoalForm();
 }
 
-function onSaveDailyLog(event) {
-  event.preventDefault();
-  const dateId = document.getElementById("logDate").value;
-  const exercises = collectExerciseRows();
+function bindRunGoalForm() {
+  const form = document.getElementById("runGoalForm");
+  if (!form) return;
 
-  const entry = {
-    dateId,
-    displayDate: formatDate(dateId),
-    runMiles: Number(document.getElementById("logRunMiles").value),
-    runMinutes: Number(document.getElementById("logRunMinutes").value),
-    plannedFocus: document.getElementById("logPlannedFocus").value,
-    workoutDone: document.getElementById("logWorkoutDone").value === "yes",
-    exercises,
-    foodCalories: Number(document.getElementById("logFoodCalories").value),
-    foodProtein: Number(document.getElementById("logFoodProtein").value),
-    foodWater: Number(document.getElementById("logFoodWater").value),
-    notes: document.getElementById("logNotes").value.trim(),
-  };
+  setValue("runGoalDailyMiles", state.goals.runDailyMiles);
+  setValue("runGoalDailyMinutes", state.goals.runDailyMinutes);
+  setValue("runGoalWeeklyMiles", state.goals.runWeeklyMiles);
+  setValue("runGoalMonthlyMiles", state.goals.runMonthlyMiles);
 
-  upsertByDate(state.dailyLogs, entry);
-  sortByDateDesc(state.dailyLogs);
-  persist();
-  render();
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.goals.runDailyMiles = Number(getValue("runGoalDailyMiles"));
+    state.goals.runDailyMinutes = Number(getValue("runGoalDailyMinutes"));
+    state.goals.runWeeklyMiles = Number(getValue("runGoalWeeklyMiles"));
+    state.goals.runMonthlyMiles = Number(getValue("runGoalMonthlyMiles"));
+    persist();
+    renderAll();
+  });
 }
 
-function onSaveBodyLog(event) {
-  event.preventDefault();
+function bindWorkoutGoalForm() {
+  const form = document.getElementById("workoutGoalForm");
+  if (!form) return;
 
-  const dateId = document.getElementById("bodyDate").value;
-  const photoInput = document.getElementById("bodyPhoto");
-  const file = photoInput.files?.[0];
+  setValue("workoutGoalDaysPerWeek", state.goals.workoutDaysPerWeek);
+  setValue("workoutGoalSessionsPerMonth", state.goals.workoutSessionsPerMonth);
 
-  const bodyEntryBase = {
-    dateId,
-    displayDate: formatDate(dateId),
-    weight: Number(document.getElementById("bodyWeight").value),
-    waist: Number(document.getElementById("bodyWaist").value || 0),
-    chest: Number(document.getElementById("bodyChest").value || 0),
-    arms: Number(document.getElementById("bodyArms").value || 0),
-    legs: Number(document.getElementById("bodyLegs").value || 0),
-  };
-
-  if (!file) {
-    upsertBodyEntry(bodyEntryBase);
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    upsertBodyEntry({ ...bodyEntryBase, photoDataUrl: String(reader.result || "") });
-    photoInput.value = "";
-  };
-  reader.readAsDataURL(file);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.goals.workoutDaysPerWeek = Number(getValue("workoutGoalDaysPerWeek"));
+    state.goals.workoutSessionsPerMonth = Number(getValue("workoutGoalSessionsPerMonth"));
+    persist();
+    renderAll();
+  });
 }
 
-function upsertBodyEntry(entry) {
-  const existing = state.bodyLogs.find((item) => item.dateId === entry.dateId);
-  if (existing && existing.photoDataUrl && !entry.photoDataUrl) {
-    entry.photoDataUrl = existing.photoDataUrl;
-  }
+function bindNutritionGoalForm() {
+  const form = document.getElementById("nutritionGoalForm");
+  if (!form) return;
 
-  upsertByDate(state.bodyLogs, entry);
-  sortByDateDesc(state.bodyLogs);
-  persist();
-  hydrateBodyInputs();
-  render();
+  setValue("nutritionGoalCalories", state.goals.foodCalories);
+  setValue("nutritionGoalProtein", state.goals.foodProtein);
+  setValue("nutritionGoalWater", state.goals.foodWater);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.goals.foodCalories = Number(getValue("nutritionGoalCalories"));
+    state.goals.foodProtein = Number(getValue("nutritionGoalProtein"));
+    state.goals.foodWater = Number(getValue("nutritionGoalWater"));
+    persist();
+    renderAll();
+  });
 }
 
-function hydrateGoalInputs() {
-  document.getElementById("goalRunDailyMiles").value = state.goals.runDailyMiles;
-  document.getElementById("goalRunDailyMinutes").value = state.goals.runDailyMinutes;
-  document.getElementById("goalRunWeeklyMiles").value = state.goals.runWeeklyMiles;
-  document.getElementById("goalRunMonthlyMiles").value = state.goals.runMonthlyMiles;
-  document.getElementById("goalWorkoutDaysPerWeek").value = state.goals.workoutDaysPerWeek;
-  document.getElementById("goalWorkoutSessionsPerMonth").value = state.goals.workoutSessionsPerMonth;
-  document.getElementById("goalFoodCalories").value = state.goals.foodCalories;
-  document.getElementById("goalFoodProtein").value = state.goals.foodProtein;
-  document.getElementById("goalFoodWater").value = state.goals.foodWater;
+function bindRunningPage() {
+  const form = document.getElementById("runLogForm");
+  if (!form) return;
+
+  const dateInput = document.getElementById("runDate");
+  dateInput.value = getDateId(new Date());
+  hydrateRunLogInputs();
+
+  dateInput.addEventListener("change", hydrateRunLogInputs);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const dateId = getValue("runDate");
+    const existing = findDailyLog(dateId);
+    const entry = {
+      dateId,
+      displayDate: formatDate(dateId),
+      runMiles: Number(getValue("runMiles")),
+      runMinutes: Number(getValue("runMinutes")),
+      workoutDone: existing?.workoutDone || false,
+      plannedFocus: existing?.plannedFocus || getPlannedFocusForDate(dateId),
+      exercises: existing?.exercises || [],
+      foodCalories: existing?.foodCalories || 0,
+      foodProtein: existing?.foodProtein || 0,
+      foodWater: existing?.foodWater || 0,
+      notes: existing?.notes || "",
+    };
+
+    upsertByDate(state.dailyLogs, entry);
+    sortByDateDesc(state.dailyLogs);
+    persist();
+    renderAll();
+  });
 }
 
-function hydrateDailyLogInputs() {
-  const dateId = document.getElementById("logDate").value;
-  const existing = state.dailyLogs.find((log) => log.dateId === dateId);
-  const plannedFocus = getPlannedFocusForDate(dateId);
-  document.getElementById("logPlannedFocus").value = plannedFocus;
+function hydrateRunLogInputs() {
+  const dateId = getValue("runDate");
+  if (!dateId) return;
+  const existing = findDailyLog(dateId);
+  setValue("runMiles", existing?.runMiles ?? "");
+  setValue("runMinutes", existing?.runMinutes ?? "");
+}
+
+function bindWorkoutPage() {
+  const form = document.getElementById("workoutLogForm");
+  if (!form) return;
+
+  const dateInput = document.getElementById("workoutDate");
+  const addBtn = document.getElementById("addExerciseBtn");
+
+  dateInput.value = getDateId(new Date());
+  hydrateWorkoutLogInputs();
+
+  addBtn.addEventListener("click", () => addExerciseRow());
+  dateInput.addEventListener("change", hydrateWorkoutLogInputs);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const dateId = getValue("workoutDate");
+    const existing = findDailyLog(dateId);
+    const entry = {
+      dateId,
+      displayDate: formatDate(dateId),
+      runMiles: existing?.runMiles || 0,
+      runMinutes: existing?.runMinutes || 0,
+      workoutDone: getValue("workoutDone") === "yes",
+      plannedFocus: getValue("workoutPlanned"),
+      exercises: collectExerciseRows(),
+      foodCalories: existing?.foodCalories || 0,
+      foodProtein: existing?.foodProtein || 0,
+      foodWater: existing?.foodWater || 0,
+      notes: getValue("workoutNotes") || existing?.notes || "",
+    };
+
+    upsertByDate(state.dailyLogs, entry);
+    sortByDateDesc(state.dailyLogs);
+    persist();
+    renderAll();
+  });
+}
+
+function hydrateWorkoutLogInputs() {
+  const dateId = getValue("workoutDate");
+  if (!dateId) return;
+
+  const existing = findDailyLog(dateId);
+  setValue("workoutPlanned", getPlannedFocusForDate(dateId));
+  setValue("workoutDone", existing?.workoutDone ? "yes" : "no");
+  setValue("workoutNotes", existing?.notes || "");
 
   clearExerciseRows();
-
-  if (!existing) {
-    document.getElementById("logRunMiles").value = "";
-    document.getElementById("logRunMinutes").value = "";
-    document.getElementById("logWorkoutDone").value = "no";
-    document.getElementById("logFoodCalories").value = "";
-    document.getElementById("logFoodProtein").value = "";
-    document.getElementById("logFoodWater").value = "";
-    document.getElementById("logNotes").value = "";
-    addExerciseRow();
-    return;
-  }
-
-  document.getElementById("logRunMiles").value = existing.runMiles;
-  document.getElementById("logRunMinutes").value = existing.runMinutes;
-  document.getElementById("logWorkoutDone").value = existing.workoutDone ? "yes" : "no";
-  document.getElementById("logFoodCalories").value = existing.foodCalories;
-  document.getElementById("logFoodProtein").value = existing.foodProtein;
-  document.getElementById("logFoodWater").value = existing.foodWater;
-  document.getElementById("logNotes").value = existing.notes || "";
-
-  if (existing.exercises?.length) {
-    existing.exercises.forEach((exercise) => addExerciseRow(exercise));
+  if (existing?.exercises?.length) {
+    existing.exercises.forEach((ex) => addExerciseRow(ex));
   } else {
     addExerciseRow();
   }
 }
 
-function hydrateBodyInputs() {
-  const dateId = document.getElementById("bodyDate").value;
-  const existing = state.bodyLogs.find((entry) => entry.dateId === dateId);
-  if (!existing) {
-    document.getElementById("bodyWeight").value = "";
-    document.getElementById("bodyWaist").value = "";
-    document.getElementById("bodyChest").value = "";
-    document.getElementById("bodyArms").value = "";
-    document.getElementById("bodyLegs").value = "";
-    return;
-  }
-
-  document.getElementById("bodyWeight").value = existing.weight;
-  document.getElementById("bodyWaist").value = existing.waist || "";
-  document.getElementById("bodyChest").value = existing.chest || "";
-  document.getElementById("bodyArms").value = existing.arms || "";
-  document.getElementById("bodyLegs").value = existing.legs || "";
-}
-
 function addExerciseRow(data = {}) {
+  const container = document.getElementById("exerciseRows");
   const template = document.getElementById("exerciseRowTemplate");
-  const row = template.content.firstElementChild.cloneNode(true);
+  if (!container || !template) return;
 
+  const row = template.content.firstElementChild.cloneNode(true);
   row.querySelector(".exercise-name").value = data.name || "";
   row.querySelector(".exercise-muscle").value = data.muscle || "legs";
   row.querySelector(".exercise-weight").value = data.weight ?? "";
@@ -252,18 +238,22 @@ function addExerciseRow(data = {}) {
 
   row.querySelector(".remove-exercise").addEventListener("click", () => {
     row.remove();
-    if (!exerciseRowsEl.children.length) addExerciseRow();
+    if (!container.children.length) addExerciseRow();
   });
 
-  exerciseRowsEl.appendChild(row);
+  container.appendChild(row);
 }
 
 function clearExerciseRows() {
-  exerciseRowsEl.innerHTML = "";
+  const container = document.getElementById("exerciseRows");
+  if (container) container.innerHTML = "";
 }
 
 function collectExerciseRows() {
-  return Array.from(exerciseRowsEl.querySelectorAll(".exercise-row"))
+  const container = document.getElementById("exerciseRows");
+  if (!container) return [];
+
+  return Array.from(container.querySelectorAll(".exercise-row"))
     .map((row) => ({
       name: row.querySelector(".exercise-name").value.trim(),
       muscle: row.querySelector(".exercise-muscle").value,
@@ -274,224 +264,379 @@ function collectExerciseRows() {
     .filter((item) => item.name && item.weight > 0 && item.reps > 0 && item.sets > 0);
 }
 
-function render() {
-  renderTodayCard();
-  renderMetrics();
-  renderPlan();
-  renderDailyHistory();
-  renderBodyHistory();
-  renderExerciseProgress();
+function bindNutritionPage() {
+  const form = document.getElementById("nutritionLogForm");
+  if (!form) return;
+
+  const dateInput = document.getElementById("nutritionDate");
+  dateInput.value = getDateId(new Date());
+  hydrateNutritionInputs();
+
+  dateInput.addEventListener("change", hydrateNutritionInputs);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const dateId = getValue("nutritionDate");
+    const existing = findDailyLog(dateId);
+
+    const entry = {
+      dateId,
+      displayDate: formatDate(dateId),
+      runMiles: existing?.runMiles || 0,
+      runMinutes: existing?.runMinutes || 0,
+      workoutDone: existing?.workoutDone || false,
+      plannedFocus: existing?.plannedFocus || getPlannedFocusForDate(dateId),
+      exercises: existing?.exercises || [],
+      foodCalories: Number(getValue("nutritionCalories")),
+      foodProtein: Number(getValue("nutritionProtein")),
+      foodWater: Number(getValue("nutritionWater")),
+      notes: existing?.notes || "",
+    };
+
+    upsertByDate(state.dailyLogs, entry);
+    sortByDateDesc(state.dailyLogs);
+    persist();
+    renderAll();
+  });
 }
 
-function renderTodayCard() {
+function hydrateNutritionInputs() {
+  const dateId = getValue("nutritionDate");
+  if (!dateId) return;
+  const existing = findDailyLog(dateId);
+  setValue("nutritionCalories", existing?.foodCalories ?? "");
+  setValue("nutritionProtein", existing?.foodProtein ?? "");
+  setValue("nutritionWater", existing?.foodWater ?? "");
+}
+
+function bindBodyPage() {
+  const form = document.getElementById("bodyForm");
+  if (!form) return;
+
+  const dateInput = document.getElementById("bodyDate");
+  dateInput.value = getDateId(new Date());
+  hydrateBodyInputs();
+
+  dateInput.addEventListener("change", hydrateBodyInputs);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const dateId = getValue("bodyDate");
+    const photoInput = document.getElementById("bodyPhoto");
+    const file = photoInput.files?.[0];
+
+    const base = {
+      dateId,
+      displayDate: formatDate(dateId),
+      weight: Number(getValue("bodyWeight")),
+      waist: Number(getValue("bodyWaist") || 0),
+      chest: Number(getValue("bodyChest") || 0),
+      arms: Number(getValue("bodyArms") || 0),
+      legs: Number(getValue("bodyLegs") || 0),
+    };
+
+    if (!file) {
+      upsertBodyEntry(base);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      upsertBodyEntry({ ...base, photoDataUrl: String(reader.result || "") });
+      photoInput.value = "";
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function hydrateBodyInputs() {
+  const dateId = getValue("bodyDate");
+  if (!dateId) return;
+  const existing = state.bodyLogs.find((item) => item.dateId === dateId);
+
+  setValue("bodyWeight", existing?.weight ?? "");
+  setValue("bodyWaist", existing?.waist ?? "");
+  setValue("bodyChest", existing?.chest ?? "");
+  setValue("bodyArms", existing?.arms ?? "");
+  setValue("bodyLegs", existing?.legs ?? "");
+}
+
+function upsertBodyEntry(entry) {
+  const existing = state.bodyLogs.find((item) => item.dateId === entry.dateId);
+  if (existing?.photoDataUrl && !entry.photoDataUrl) entry.photoDataUrl = existing.photoDataUrl;
+
+  upsertByDate(state.bodyLogs, entry);
+  sortByDateDesc(state.bodyLogs);
+  persist();
+  renderAll();
+}
+
+function renderAll() {
+  renderDashboard();
+  renderRunningPage();
+  renderWorkoutPage();
+  renderNutritionPage();
+  renderBodyPage();
+  renderPlanPage();
+}
+
+function renderDashboard() {
+  const metricsEl = document.getElementById("dashboardMetrics");
+  if (!metricsEl) return;
+
   const todayId = getDateId(new Date());
-  const todayLog = state.dailyLogs.find((log) => log.dateId === todayId);
-  const focus = getPlannedFocusForDate(todayId);
+  const today = findDailyLog(todayId);
+  const week = getPeriodStats("week");
+  const month = getPeriodStats("month");
 
-  todayCardEl.innerHTML = `
-    <strong>${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</strong>
-    <div>Planned focus: ${focus}</div>
-    <div>Run goal: ${state.goals.runDailyMiles} miles</div>
-    <div>Log status: ${todayLog ? "Saved" : "Pending"}</div>
-  `;
-}
+  metricsEl.innerHTML = [
+    metricCard("Run Today", `${today?.runMiles || 0}/${state.goals.runDailyMiles} mi`, progressPercent(today?.runMiles || 0, state.goals.runDailyMiles), `${today?.runMinutes || 0}/${state.goals.runDailyMinutes} min`),
+    metricCard("Run This Week", `${week.runMiles.toFixed(1)}/${state.goals.runWeeklyMiles} mi`, progressPercent(week.runMiles, state.goals.runWeeklyMiles), `${week.runDays} run days`),
+    metricCard("Workout This Week", `${week.workoutDays}/${state.goals.workoutDaysPerWeek} days`, progressPercent(week.workoutDays, state.goals.workoutDaysPerWeek), `${week.exerciseCount} exercise entries`),
+    metricCard("Workout This Month", `${month.workoutDays}/${state.goals.workoutSessionsPerMonth} sessions`, progressPercent(month.workoutDays, state.goals.workoutSessionsPerMonth), `${month.exerciseCount} exercise entries`),
+    metricCard("Food Today", `${today?.foodCalories || 0}/${state.goals.foodCalories} cal`, progressPercent(today?.foodCalories || 0, state.goals.foodCalories), `Protein ${today?.foodProtein || 0}/${state.goals.foodProtein}g | Water ${today?.foodWater || 0}/${state.goals.foodWater}oz`),
+    metricCard("Body Trend", bodyTrendText(), 100, "From first entry to latest entry"),
+  ].join("");
 
-function renderMetrics() {
-  const todayId = getDateId(new Date());
-  const todayLog = state.dailyLogs.find((log) => log.dateId === todayId);
-
-  const weekStats = getPeriodStats("week");
-  const monthStats = getPeriodStats("month");
-
-  const cards = [
-    metricCard(
-      "Running Day Goal",
-      `${todayLog?.runMiles || 0} / ${state.goals.runDailyMiles} miles`,
-      progressPercent(todayLog?.runMiles || 0, state.goals.runDailyMiles),
-      `${todayLog?.runMinutes || 0} min / ${state.goals.runDailyMinutes} min`
-    ),
-    metricCard(
-      "Running Week Goal",
-      `${weekStats.runMiles.toFixed(1)} / ${state.goals.runWeeklyMiles} miles`,
-      progressPercent(weekStats.runMiles, state.goals.runWeeklyMiles),
-      `${weekStats.runDays} run days`
-    ),
-    metricCard(
-      "Running Month Goal",
-      `${monthStats.runMiles.toFixed(1)} / ${state.goals.runMonthlyMiles} miles`,
-      progressPercent(monthStats.runMiles, state.goals.runMonthlyMiles),
-      `${monthStats.runDays} run days`
-    ),
-    metricCard(
-      "Workout Week Goal",
-      `${weekStats.workoutDays} / ${state.goals.workoutDaysPerWeek} days`,
-      progressPercent(weekStats.workoutDays, state.goals.workoutDaysPerWeek),
-      `${weekStats.exerciseCount} exercise entries`
-    ),
-    metricCard(
-      "Workout Month Goal",
-      `${monthStats.workoutDays} / ${state.goals.workoutSessionsPerMonth} sessions`,
-      progressPercent(monthStats.workoutDays, state.goals.workoutSessionsPerMonth),
-      `${monthStats.exerciseCount} exercise entries`
-    ),
-    metricCard(
-      "Food Day Goal",
-      `${todayLog?.foodCalories || 0}/${state.goals.foodCalories} cal`,
-      progressPercent(todayLog?.foodCalories || 0, state.goals.foodCalories),
-      `Protein: ${todayLog?.foodProtein || 0}/${state.goals.foodProtein}g | Water: ${todayLog?.foodWater || 0}/${state.goals.foodWater}oz`
-    ),
-  ];
-
-  metricsEl.innerHTML = cards.join("");
-}
-
-function metricCard(label, value, pct, subtext) {
-  return `
-    <article class="metric">
-      <div class="metric-head">
-        <span>${escapeHtml(label)}</span>
-        <span>${Math.round(pct)}%</span>
+  const todayEl = document.getElementById("dashboardToday");
+  if (todayEl) {
+    todayEl.innerHTML = `
+      <div class="card">
+        <div class="card-title">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+        <div>Planned focus: ${escapeHtml(getPlannedFocusForDate(todayId))}</div>
+        <div class="subtle">Log status: ${today ? "Saved" : "Pending"}</div>
       </div>
-      <div>${escapeHtml(value)}</div>
-      <div class="metric-sub">${escapeHtml(subtext)}</div>
-      <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
-    </article>
-  `;
-}
-
-function renderPlan() {
-  const now = new Date();
-  const currentWeek = getProgramWeekIndex(getDateId(now));
-  const currentDayIndex = getWeekDayIndexMonday(now);
-
-  planMetaEl.textContent = `Current cycle week: ${currentWeek + 1} of ${SPLIT_PLAN.length}. Today is ${WEEK_DAYS[currentDayIndex]}.`;
-
-  const header = `<thead><tr><th>Cycle Week</th>${WEEK_DAYS.map((day) => `<th>${day}</th>`).join("")}</tr></thead>`;
-  const bodyRows = SPLIT_PLAN.map((row, rowIndex) => {
-    const cells = row
-      .map((item, dayIndex) => {
-        const cellClass = dayIndex === currentDayIndex ? "today-cell" : "";
-        return `<td class="${cellClass}">${escapeHtml(item)}</td>`;
-      })
-      .join("");
-
-    const rowClass = rowIndex === currentWeek ? "current-week-row" : "";
-    return `<tr class="${rowClass}"><td>Week ${rowIndex + 1}</td>${cells}</tr>`;
-  }).join("");
-
-  planTableEl.innerHTML = `${header}<tbody>${bodyRows}</tbody>`;
-}
-
-function renderDailyHistory() {
-  if (!state.dailyLogs.length) {
-    historyEl.innerHTML = "<p>No logs yet. Save your first day.</p>";
-    return;
+    `;
   }
 
-  historyEl.innerHTML = state.dailyLogs.slice(0, 21).map((log) => {
-    const exerciseSummary = log.exercises?.length
-      ? log.exercises.map((ex) => `${escapeHtml(ex.name)} ${ex.weight}x${ex.reps} (${ex.sets} sets)`).join(" | ")
-      : "No exercises logged";
-
-    return `
-      <article class="log-card">
-        <div class="log-date">${escapeHtml(log.displayDate)}</div>
-        <div>Running: ${log.runMiles} mi in ${log.runMinutes} min</div>
-        <div>Workout: ${log.workoutDone ? "Done" : "Missed"} | Focus: ${escapeHtml(log.plannedFocus || "N/A")}</div>
-        <div>Food: ${log.foodCalories} cal, ${log.foodProtein}g protein, ${log.foodWater}oz water</div>
-        <div class="small">Exercises: ${exerciseSummary}</div>
-        ${log.notes ? `<div class="small">Notes: ${escapeHtml(log.notes)}</div>` : ""}
-      </article>
-    `;
-  }).join("");
+  renderLogList("dashboardRecent", state.dailyLogs, 6);
 }
 
-function renderBodyHistory() {
+function renderRunningPage() {
+  const metricsEl = document.getElementById("runMetrics");
+  if (!metricsEl) return;
+
+  const today = findDailyLog(getDateId(new Date()));
+  const week = getPeriodStats("week");
+  const month = getPeriodStats("month");
+
+  metricsEl.innerHTML = [
+    metricCard("Daily Miles", `${today?.runMiles || 0}/${state.goals.runDailyMiles}`, progressPercent(today?.runMiles || 0, state.goals.runDailyMiles), `${today?.runMinutes || 0}/${state.goals.runDailyMinutes} minutes`),
+    metricCard("Weekly Miles", `${week.runMiles.toFixed(1)}/${state.goals.runWeeklyMiles}`, progressPercent(week.runMiles, state.goals.runWeeklyMiles), `${week.runDays} run days this week`),
+    metricCard("Monthly Miles", `${month.runMiles.toFixed(1)}/${state.goals.runMonthlyMiles}`, progressPercent(month.runMiles, state.goals.runMonthlyMiles), `${month.runDays} run days this month`),
+  ].join("");
+
+  renderLogList("runHistory", state.dailyLogs.filter((log) => log.runMiles > 0 || log.runMinutes > 0), 20, (log) => `Running: ${log.runMiles} mi in ${log.runMinutes} min`);
+}
+
+function renderWorkoutPage() {
+  const metricsEl = document.getElementById("workoutMetrics");
+  if (!metricsEl) return;
+
+  const week = getPeriodStats("week");
+  const month = getPeriodStats("month");
+
+  metricsEl.innerHTML = [
+    metricCard("Week Sessions", `${week.workoutDays}/${state.goals.workoutDaysPerWeek}`, progressPercent(week.workoutDays, state.goals.workoutDaysPerWeek), `${week.exerciseCount} exercise entries`),
+    metricCard("Month Sessions", `${month.workoutDays}/${state.goals.workoutSessionsPerMonth}`, progressPercent(month.workoutDays, state.goals.workoutSessionsPerMonth), `${month.exerciseCount} exercise entries`),
+  ].join("");
+
+  renderWorkoutTable("workoutPlanMeta", "workoutPlanTable");
+  renderExerciseProgress("workoutProgress");
+  renderLogList("workoutHistory", state.dailyLogs.filter((log) => log.workoutDone || (log.exercises || []).length), 20, (log) => {
+    const count = (log.exercises || []).length;
+    return `Workout: ${log.workoutDone ? "Done" : "Missed"} | Focus: ${log.plannedFocus || "N/A"} | Exercises: ${count}`;
+  });
+}
+
+function renderNutritionPage() {
+  const metricsEl = document.getElementById("nutritionMetrics");
+  if (!metricsEl) return;
+
+  const today = findDailyLog(getDateId(new Date()));
+  metricsEl.innerHTML = [
+    metricCard("Calories", `${today?.foodCalories || 0}/${state.goals.foodCalories}`, progressPercent(today?.foodCalories || 0, state.goals.foodCalories), "Daily calorie target"),
+    metricCard("Protein", `${today?.foodProtein || 0}/${state.goals.foodProtein} g`, progressPercent(today?.foodProtein || 0, state.goals.foodProtein), "Daily protein target"),
+    metricCard("Water", `${today?.foodWater || 0}/${state.goals.foodWater} oz`, progressPercent(today?.foodWater || 0, state.goals.foodWater), "Daily hydration target"),
+  ].join("");
+
+  renderLogList("nutritionHistory", state.dailyLogs.filter((log) => log.foodCalories || log.foodProtein || log.foodWater), 20, (log) => `Food: ${log.foodCalories} cal | ${log.foodProtein}g protein | ${log.foodWater}oz water`);
+}
+
+function renderBodyPage() {
+  const metricsEl = document.getElementById("bodyMetrics");
+  if (!metricsEl) return;
+
+  const first = [...state.bodyLogs].sort((a, b) => (a.dateId > b.dateId ? 1 : -1))[0];
+  const latest = [...state.bodyLogs].sort((a, b) => (a.dateId < b.dateId ? 1 : -1))[0];
+
+  const deltaWeight = first && latest ? latest.weight - first.weight : 0;
+  const deltaWaist = first && latest ? latest.waist - first.waist : 0;
+
+  metricsEl.innerHTML = [
+    metricCard("Current Weight", `${latest?.weight || 0} lb`, 100, latest ? `Latest entry ${latest.displayDate}` : "No entries yet"),
+    metricCard("Weight Change", `${formatDelta(deltaWeight)} lb`, 100, "From first to latest"),
+    metricCard("Waist Change", `${formatDelta(deltaWaist)} in`, 100, "From first to latest"),
+  ].join("");
+
+  const historyEl = document.getElementById("bodyHistory");
+  historyEl.innerHTML = "";
   if (!state.bodyLogs.length) {
-    bodyHistoryEl.innerHTML = "<p>No body entries yet.</p>";
+    historyEl.innerHTML = "<p>No body entries yet.</p>";
     return;
   }
 
   const cards = state.bodyLogs.slice(0, 14).map((entry) => `
-    <article class="log-card">
-      <div class="log-date">${escapeHtml(entry.displayDate)}</div>
+    <article class="card">
+      <div class="card-title">${escapeHtml(entry.displayDate)}</div>
       <div>Weight: ${entry.weight} lb</div>
-      <div class="small">Waist: ${entry.waist || 0} in | Chest: ${entry.chest || 0} in | Arms: ${entry.arms || 0} in | Legs: ${entry.legs || 0} in</div>
+      <div class="subtle">Waist ${entry.waist || 0} in | Chest ${entry.chest || 0} in | Arms ${entry.arms || 0} in | Legs ${entry.legs || 0} in</div>
     </article>
   `).join("");
 
   const photos = state.bodyLogs
     .filter((entry) => entry.photoDataUrl)
-    .slice(0, 20)
-    .map((entry) => `<figure><img src="${entry.photoDataUrl}" alt="Progress photo ${escapeHtml(entry.displayDate)}" /><figcaption class="small">${escapeHtml(entry.displayDate)}</figcaption></figure>`)
+    .slice(0, 24)
+    .map((entry) => `<figure><img src="${entry.photoDataUrl}" alt="Progress ${escapeHtml(entry.displayDate)}" /><figcaption class="subtle">${escapeHtml(entry.displayDate)}</figcaption></figure>`)
     .join("");
 
-  bodyHistoryEl.innerHTML = `${cards}${photos ? `<div class="photo-grid">${photos}</div>` : ""}`;
+  historyEl.innerHTML = `${cards}${photos ? `<div class="photo-grid">${photos}</div>` : ""}`;
 }
 
-function renderExerciseProgress() {
+function renderPlanPage() {
+  if (!document.getElementById("planTable")) return;
+  renderWorkoutTable("planMeta", "planTable");
+
+  const listEl = document.getElementById("planCompliance");
+  if (listEl) {
+    const missed = state.dailyLogs
+      .filter((log) => getPlannedFocusForDate(log.dateId) !== "X" && !log.workoutDone)
+      .slice(0, 14);
+
+    if (!missed.length) {
+      listEl.innerHTML = "<p>No missed planned workout days logged recently.</p>";
+    } else {
+      listEl.innerHTML = missed
+        .map((log) => `<article class="card"><div class="card-title">${escapeHtml(log.displayDate)}</div><div>Missed focus: ${escapeHtml(getPlannedFocusForDate(log.dateId))}</div></article>`)
+        .join("");
+    }
+  }
+}
+
+function renderWorkoutTable(metaId, tableId) {
+  const metaEl = document.getElementById(metaId);
+  const tableEl = document.getElementById(tableId);
+  if (!metaEl || !tableEl) return;
+
+  const now = new Date();
+  const currentWeek = getProgramWeekIndex(getDateId(now));
+  const currentDayIndex = getWeekDayIndexMonday(now);
+
+  metaEl.textContent = `Current cycle week: ${currentWeek + 1} of ${SPLIT_PLAN.length}. Today: ${WEEK_DAYS[currentDayIndex]}.`;
+
+  const header = `<thead><tr><th>Cycle Week</th>${WEEK_DAYS.map((day) => `<th>${day}</th>`).join("")}</tr></thead>`;
+  const rows = SPLIT_PLAN.map((row, weekIndex) => {
+    const cells = row
+      .map((item, dayIndex) => `<td class="${dayIndex === currentDayIndex ? "today-cell" : ""}">${escapeHtml(item)}</td>`)
+      .join("");
+    return `<tr class="${weekIndex === currentWeek ? "current-row" : ""}"><td>Week ${weekIndex + 1}</td>${cells}</tr>`;
+  }).join("");
+
+  tableEl.innerHTML = `${header}<tbody>${rows}</tbody>`;
+}
+
+function renderExerciseProgress(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
   const map = buildExerciseProgressMap();
   const names = Object.keys(map).sort((a, b) => a.localeCompare(b));
-
   if (!names.length) {
-    exerciseProgressEl.innerHTML = "<p>Add exercise logs to see baseline vs latest progress.</p>";
+    target.innerHTML = "<p>Add workout exercise logs to see baseline vs latest progress.</p>";
     return;
   }
 
-  exerciseProgressEl.innerHTML = names.map((name) => {
+  target.innerHTML = names.map((name) => {
     const item = map[name];
-    const weightDelta = item.latest.weight - item.baseline.weight;
-    const repsDelta = item.latest.reps - item.baseline.reps;
+    const wd = item.latest.weight - item.baseline.weight;
+    const rd = item.latest.reps - item.baseline.reps;
 
     return `
-      <article class="log-card">
-        <div class="log-date">${escapeHtml(name)} (${escapeHtml(item.latest.muscle)})</div>
-        <div>Baseline: ${item.baseline.weight} lb x ${item.baseline.reps} reps</div>
-        <div>Latest: ${item.latest.weight} lb x ${item.latest.reps} reps</div>
-        <div class="small">Change: ${formatDelta(weightDelta)} lb, ${formatDelta(repsDelta)} reps</div>
+      <article class="card">
+        <div class="card-title">${escapeHtml(name)} (${escapeHtml(item.latest.muscle)})</div>
+        <div>Baseline: ${item.baseline.weight} lb x ${item.baseline.reps}</div>
+        <div>Latest: ${item.latest.weight} lb x ${item.latest.reps}</div>
+        <div class="subtle">Change: ${formatDelta(wd)} lb, ${formatDelta(rd)} reps</div>
       </article>
     `;
   }).join("");
 }
 
 function buildExerciseProgressMap() {
-  const progress = {};
   const logsAsc = [...state.dailyLogs].sort((a, b) => (a.dateId > b.dateId ? 1 : -1));
+  const map = {};
 
   logsAsc.forEach((log) => {
-    (log.exercises || []).forEach((ex) => {
-      const key = ex.name.trim().toLowerCase();
+    (log.exercises || []).forEach((exercise) => {
+      const key = exercise.name.trim().toLowerCase();
       if (!key) return;
-      if (!progress[key]) {
-        progress[key] = { displayName: ex.name, baseline: ex, latest: ex };
-      } else {
-        progress[key].latest = ex;
-      }
-      progress[key].displayName = ex.name;
+      if (!map[key]) map[key] = { displayName: exercise.name, baseline: exercise, latest: exercise };
+      map[key].latest = exercise;
+      map[key].displayName = exercise.name;
     });
   });
 
   const normalized = {};
-  Object.values(progress).forEach((item) => {
+  Object.values(map).forEach((item) => {
     normalized[item.displayName] = item;
   });
-
   return normalized;
+}
+
+function renderLogList(targetId, logs, limit, lineBuilder) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  const subset = logs.slice(0, limit);
+  if (!subset.length) {
+    target.innerHTML = "<p>No logs yet.</p>";
+    return;
+  }
+
+  target.innerHTML = subset.map((log) => `
+    <article class="card">
+      <div class="card-title">${escapeHtml(log.displayDate || formatDate(log.dateId))}</div>
+      <div>${escapeHtml(lineBuilder ? lineBuilder(log) : defaultLogLine(log))}</div>
+    </article>
+  `).join("");
+}
+
+function defaultLogLine(log) {
+  return `Run ${log.runMiles || 0} mi | Workout ${log.workoutDone ? "Done" : "Missed"} | Food ${log.foodCalories || 0} cal`;
+}
+
+function metricCard(label, value, percent, subtext) {
+  return `
+    <article class="metric">
+      <div class="metric-head"><span>${escapeHtml(label)}</span><span>${Math.round(percent)}%</span></div>
+      <div>${escapeHtml(value)}</div>
+      <div class="metric-sub">${escapeHtml(subtext)}</div>
+      <div class="bar"><div class="fill" style="width:${percent}%"></div></div>
+    </article>
+  `;
 }
 
 function getPeriodStats(period) {
   const now = new Date();
   const bounds = period === "week" ? getWeekBoundsMonday(now) : getMonthBounds(now);
 
-  return state.dailyLogs.reduce((stats, log) => {
+  return state.dailyLogs.reduce((acc, log) => {
     const logDate = new Date(log.dateId + "T00:00:00");
-    if (logDate < bounds.start || logDate > bounds.end) return stats;
+    if (logDate < bounds.start || logDate > bounds.end) return acc;
 
-    stats.runMiles += Number(log.runMiles || 0);
-    if ((log.runMiles || 0) > 0) stats.runDays += 1;
-    if (log.workoutDone) stats.workoutDays += 1;
-    stats.exerciseCount += (log.exercises || []).length;
-    return stats;
+    acc.runMiles += Number(log.runMiles || 0);
+    if ((log.runMiles || 0) > 0) acc.runDays += 1;
+    if (log.workoutDone) acc.workoutDays += 1;
+    acc.exerciseCount += (log.exercises || []).length;
+    return acc;
   }, {
     runMiles: 0,
     runDays: 0,
@@ -500,10 +645,18 @@ function getPeriodStats(period) {
   });
 }
 
+function bodyTrendText() {
+  if (state.bodyLogs.length < 2) return "Need at least 2 entries";
+  const asc = [...state.bodyLogs].sort((a, b) => (a.dateId > b.dateId ? 1 : -1));
+  const first = asc[0];
+  const last = asc[asc.length - 1];
+  return `${formatDelta(last.weight - first.weight)} lb`;
+}
+
 function getPlannedFocusForDate(dateId) {
-  const weekIndex = getProgramWeekIndex(dateId);
-  const dayIndex = getWeekDayIndexMonday(new Date(dateId + "T00:00:00"));
-  return SPLIT_PLAN[weekIndex][dayIndex];
+  const week = getProgramWeekIndex(dateId);
+  const day = getWeekDayIndexMonday(new Date(dateId + "T00:00:00"));
+  return SPLIT_PLAN[week][day];
 }
 
 function getProgramWeekIndex(dateId) {
@@ -529,7 +682,6 @@ function getWeekBoundsMonday(date) {
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
   end.setHours(23, 59, 59, 999);
-
   return { start, end };
 }
 
@@ -544,22 +696,28 @@ function progressPercent(current, target) {
   return Math.min(100, (current / target) * 100);
 }
 
-function formatDelta(value) {
-  if (value > 0) return `+${value}`;
-  return `${value}`;
-}
-
 function upsertByDate(arr, entry) {
-  const index = arr.findIndex((item) => item.dateId === entry.dateId);
-  if (index >= 0) {
-    arr[index] = { ...arr[index], ...entry };
-  } else {
-    arr.push(entry);
-  }
+  const i = arr.findIndex((item) => item.dateId === entry.dateId);
+  if (i >= 0) arr[i] = { ...arr[i], ...entry };
+  else arr.push(entry);
 }
 
 function sortByDateDesc(arr) {
   arr.sort((a, b) => (a.dateId < b.dateId ? 1 : -1));
+}
+
+function findDailyLog(dateId) {
+  return state.dailyLogs.find((item) => item.dateId === dateId);
+}
+
+function setValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value;
+}
+
+function getValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : "";
 }
 
 function getDateId(date) {
@@ -576,6 +734,11 @@ function formatDate(dateId) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatDelta(value) {
+  if (value > 0) return `+${value}`;
+  return `${value}`;
 }
 
 function escapeHtml(str) {

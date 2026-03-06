@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack Workouts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="workouts">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Workouts</h1>
+        <p>6-day split planning, daily targets, and exercise progression.</p>
+      </div>
+      <nav class="nav">
+        <a href="index.html" data-page="dashboard">Dashboard</a>
+        <a href="running.html" data-page="running">Running</a>
+        <a href="workouts.html" data-page="workouts">Workouts</a>
+        <a href="nutrition.html" data-page="nutrition">Nutrition</a>
+        <a href="body.html" data-page="body">Body</a>
+        <a href="plan.html" data-page="plan">Split Plan</a>
+      </nav>
+    </header>
+
+    <main class="grid">
+      <section class="panel">
+        <h2>Workout Goals</h2>
+        <form id="workoutGoalForm" class="stack">
+          <label>Workout days per week<input type="number" id="workoutGoalDaysPerWeek" min="1" max="7" required /></label>
+          <label>Workout sessions per month<input type="number" id="workoutGoalSessionsPerMonth" min="4" step="1" required /></label>
+          <button type="submit">Save Workout Goals</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Workout Log</h2>
+        <form id="workoutLogForm" class="stack">
+          <label>Date<input type="date" id="workoutDate" required /></label>
+          <label>Planned focus<input type="text" id="workoutPlanned" readonly /></label>
+          <label>Completed workout?
+            <select id="workoutDone" required>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <div>
+            <div class="row-head">
+              <strong>Exercise Tracker (Weight/Reps/Sets)</strong>
+              <button type="button" id="addExerciseBtn" class="secondary">Add Exercise</button>
+            </div>
+            <div id="exerciseRows" class="exercise-rows"></div>
+          </div>
+          <label>Notes<textarea id="workoutNotes" rows="3"></textarea></label>
+          <button type="submit">Save Workout Log</button>
+        </form>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Workout Metrics</h2>
+        <div id="workoutMetrics" class="metrics"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Workout Split Table</h2>
+        <p id="workoutPlanMeta" class="subtle"></p>
+        <div class="table-wrap"><table id="workoutPlanTable"></table></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Exercise Baseline vs Latest</h2>
+        <div id="workoutProgress" class="list"></div>
+      </section>
+
+      <section class="panel span-2">
+        <h2>Workout History</h2>
+        <div id="workoutHistory" class="list"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="exerciseRowTemplate">
+    <div class="exercise-row">
+      <input type="text" class="exercise-name" placeholder="Exercise" required />
+      <select class="exercise-muscle" required>
+        <option value="legs">Legs</option>
+        <option value="chest">Chest</option>
+        <option value="back">Back</option>
+        <option value="shoulders">Shoulders</option>
+        <option value="abs">Abs</option>
+        <option value="arms">Arms</option>
+        <option value="full-body">Full Body</option>
+      </select>
+      <input type="number" class="exercise-weight" min="0" step="1" placeholder="Weight" required />
+      <input type="number" class="exercise-reps" min="1" step="1" placeholder="Reps" required />
+      <input type="number" class="exercise-sets" min="1" step="1" placeholder="Sets" required />
+      <button type="button" class="danger remove-exercise">Remove</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
