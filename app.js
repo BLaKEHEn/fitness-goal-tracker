@@ -230,14 +230,29 @@ function bindWorkoutPage() {
     event.preventDefault();
     const dateId = getValue("workoutDate");
     const existing = findDailyLog(dateId);
+    const workoutDone = getValue("workoutDone") === "yes";
+    const exerciseResult = collectExerciseRows();
+
+    if (exerciseResult.hasPartial) {
+      showWorkoutError("Finish or remove partially filled exercise rows before saving.");
+      return;
+    }
+
+    if (workoutDone && exerciseResult.entries.length === 0) {
+      showWorkoutError("Add at least one complete exercise when workout is marked done.");
+      return;
+    }
+
+    showWorkoutError("");
+
     const entry = {
       dateId,
       displayDate: formatDate(dateId),
       runMiles: existing?.runMiles || 0,
       runMinutes: existing?.runMinutes || 0,
-      workoutDone: getValue("workoutDone") === "yes",
+      workoutDone,
       plannedFocus: getValue("workoutPlanned"),
-      exercises: collectExerciseRows(),
+      exercises: exerciseResult.entries,
       foodCalories: existing?.foodCalories || 0,
       foodProtein: existing?.foodProtein || 0,
       foodWater: existing?.foodWater || 0,
@@ -259,6 +274,7 @@ function hydrateWorkoutLogInputs() {
   setValue("workoutPlanned", getPlannedFocusForDate(dateId));
   setValue("workoutDone", existing?.workoutDone ? "yes" : "no");
   setValue("workoutNotes", existing?.notes || "");
+  showWorkoutError("");
 
   clearExerciseRows();
   if (existing?.exercises?.length) {
@@ -320,17 +336,45 @@ function clearExerciseRows() {
 
 function collectExerciseRows() {
   const container = document.getElementById("exerciseRows");
-  if (!container) return [];
+  if (!container) return { entries: [], hasPartial: false };
 
-  return Array.from(container.querySelectorAll(".exercise-row"))
-    .map((row) => ({
-      name: row.querySelector(".exercise-name").value.trim(),
-      muscle: row.querySelector(".exercise-muscle").value,
-      weight: Number(row.querySelector(".exercise-weight").value),
-      reps: Number(row.querySelector(".exercise-reps").value),
-      sets: Number(row.querySelector(".exercise-sets").value),
-    }))
-    .filter((item) => item.name && item.weight > 0 && item.reps > 0 && item.sets > 0);
+  const entries = [];
+  let hasPartial = false;
+
+  Array.from(container.querySelectorAll(".exercise-row")).forEach((row) => {
+    const name = row.querySelector(".exercise-name").value.trim();
+    const muscle = row.querySelector(".exercise-muscle").value;
+    const weightRaw = row.querySelector(".exercise-weight").value.trim();
+    const repsRaw = row.querySelector(".exercise-reps").value.trim();
+    const setsRaw = row.querySelector(".exercise-sets").value.trim();
+
+    const hasAnyValue = name || weightRaw || repsRaw || setsRaw;
+    if (!hasAnyValue) return;
+
+    const weight = weightRaw === "" ? NaN : Number(weightRaw);
+    const reps = repsRaw === "" ? NaN : Number(repsRaw);
+    const sets = setsRaw === "" ? NaN : Number(setsRaw);
+
+    const complete = name
+      && Number.isFinite(weight) && weight >= 0
+      && Number.isFinite(reps) && reps > 0
+      && Number.isFinite(sets) && sets > 0;
+
+    if (!complete) {
+      hasPartial = true;
+      return;
+    }
+
+    entries.push({ name, muscle, weight, reps, sets });
+  });
+
+  return { entries, hasPartial };
+}
+
+function showWorkoutError(message) {
+  const el = document.getElementById("workoutFormError");
+  if (!el) return;
+  el.textContent = message || "";
 }
 
 function bindNutritionPage() {

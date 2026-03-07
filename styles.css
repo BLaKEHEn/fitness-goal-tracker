@@ -276,6 +276,11 @@ button.danger {
   font-size: 0.86rem;
 }
 
+.form-error {
+  color: #ff9fb2;
+  min-height: 1.1rem;
+}
+
 .row-head {
   display: flex;
   justify-content: space-between;

@@ -65,6 +65,7 @@
               </div>
               <div id="exerciseRows" class="exercise-rows"></div>
             </div>
+            <p id="workoutFormError" class="subtle form-error" aria-live="polite"></p>
             <label>Notes<textarea id="workoutNotes" rows="3"></textarea></label>
             <button type="submit">Save Workout Log</button>
           </form>
@@ -102,8 +103,8 @@
 
   <template id="exerciseRowTemplate">
     <div class="exercise-row">
-      <input type="text" class="exercise-name" placeholder="Exercise" required />
-      <select class="exercise-muscle" required>
+      <input type="text" class="exercise-name" placeholder="Exercise" />
+      <select class="exercise-muscle">
         <option value="legs">Legs</option>
         <option value="chest">Chest</option>
         <option value="back">Back</option>
@@ -112,9 +113,9 @@
         <option value="arms">Arms</option>
         <option value="full-body">Full Body</option>
       </select>
-      <input type="number" class="exercise-weight" min="0" step="1" placeholder="Weight" required />
-      <input type="number" class="exercise-reps" min="1" step="1" placeholder="Reps" required />
-      <input type="number" class="exercise-sets" min="1" step="1" placeholder="Sets" required />
+      <input type="number" class="exercise-weight" min="0" step="1" placeholder="Weight" />
+      <input type="number" class="exercise-reps" min="1" step="1" placeholder="Reps" />
+      <input type="number" class="exercise-sets" min="1" step="1" placeholder="Sets" />
       <button type="button" class="danger remove-exercise">Remove</button>
     </div>
   </template>
